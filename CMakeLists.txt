@@ -57,6 +57,12 @@ mola_add_library(
     mrpt-ros2bridge
 )
 
+# Add vendored version of ROS1:
+# Must be after the library above to avoid poluting its global compiler flags, etc. 
+add_subdirectory(thirdparty EXCLUDE_FROM_ALL)
+target_link_libraries(${PROJECT_NAME} PRIVATE rosbag)
+
+
 # Credits: https://gist.github.com/jtanx/96ded5e050d5ee5b19804195ee5cf5f9
 function(pad_string output str padchar length)
   string(LENGTH "${str}" _strlen)
@@ -95,3 +101,5 @@ mrpt_version_to_hex(cv_bridge_VERSION  cv_bridge_VERSION_HEX)
 target_compile_definitions(${PROJECT_NAME} PRIVATE CV_BRIDGE_VERSION=${cv_bridge_VERSION_HEX})
 
 message(STATUS "Found: cv_bridge_VERSION: ${cv_bridge_VERSION} (${cv_bridge_VERSION_HEX})")
+
+

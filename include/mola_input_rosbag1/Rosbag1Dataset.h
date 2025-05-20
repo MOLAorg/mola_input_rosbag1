@@ -23,13 +23,9 @@ namespace tf2
 {
 class BufferCore;
 }
-namespace rosbag2_cpp::readers
+namespace rosbag
 {
-class SequentialReader;
-}
-namespace rosbag2_storage
-{
-class SerializedBagMessage;
+class MessageInstance;
 }
 
 namespace mola
@@ -55,7 +51,6 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
 
  public:
   Rosbag1Dataset();
-  ~Rosbag1Dataset() override = default;
 
   // See docs in base class
   void spinOnce() override;
@@ -113,12 +108,13 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
   std::optional<mrpt::Clock::time_point> last_play_wallclock_time_;
   double                                 last_dataset_time_ = 0;
 
-  std::shared_ptr<rosbag2_cpp::readers::SequentialReader> reader_;
-  size_t                                                  bagMessageCount_ = 0;
+  struct BagInfo;
+  std::shared_ptr<BagInfo> bag_reader_;
+  size_t                   bagMessageCount_ = 0;
 
   using SF = mrpt::obs::CSensoryFrame;
 
-  SF::Ptr to_mrpt(const rosbag2_storage::SerializedBagMessage& rosmsg);
+  SF::Ptr to_mrpt(const rosbag::MessageInstance& rosmsg);
 
   void doReadAhead(
       const std::optional<size_t>& requestedIndex = std::nullopt, bool skipBufferAhead = false);
@@ -145,7 +141,7 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
   // -------------------------------------------------------
   using Obs = std::vector<mrpt::obs::CObservation::Ptr>;
 
-  using CallbackFunction = std::function<Obs(const rosbag2_storage::SerializedBagMessage&)>;
+  using CallbackFunction = std::function<Obs(const rosbag::MessageInstance&)>;
 
   std::map<std::string, std::vector<CallbackFunction>> lookup_;
   std::set<std::string>                                unhandledTopics_;
@@ -153,32 +149,32 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
   std::shared_ptr<tf2::BufferCore> tfBuffer_;
 
   template <bool isStatic>
-  Obs toTf(const rosbag2_storage::SerializedBagMessage& rosmsg);
+  Obs toTf(const rosbag::MessageInstance& rosmsg);
 
   Obs toPointCloud2(
-      std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
+      std::string_view label, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
   Obs toLidar2D(
-      std::string_view msg, const rosbag2_storage::SerializedBagMessage& rosmsg,
+      std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
   Obs toRotatingScan(
-      std::string_view msg, const rosbag2_storage::SerializedBagMessage& rosmsg,
+      std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
   Obs toIMU(
-      std::string_view msg, const rosbag2_storage::SerializedBagMessage& rosmsg,
+      std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
   Obs toGPS(
-      std::string_view msg, const rosbag2_storage::SerializedBagMessage& rosmsg,
+      std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
-  Obs toOdometry(std::string_view msg, const rosbag2_storage::SerializedBagMessage& rosmsg);
+  Obs toOdometry(std::string_view msg, const rosbag::MessageInstance& rosmsg);
 
   Obs toImage(
-      std::string_view msg, const rosbag2_storage::SerializedBagMessage& rosmsg,
+      std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
   Obs catchExceptions(const std::function<Obs()>& f);

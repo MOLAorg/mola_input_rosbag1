@@ -39,6 +39,8 @@
 #include <tf2/convert.h>
 #include <tf2/exceptions.h>
 
+#include <memory>
+
 #if CV_BRIDGE_VERSION < 0x030400
 #include <cv_bridge/cv_bridge.h>
 #else
@@ -66,7 +68,15 @@ IMPLEMENTS_MRPT_OBJECT(Rosbag1Dataset, RawDataSourceBase, mola)
 
 MRPT_INITIALIZER(do_register_Rosbag1Dataset) { MOLA_REGISTER_MODULE(Rosbag1Dataset); }
 
-Rosbag1Dataset::Rosbag1Dataset()
+struct Rosbag1Dataset::BagInfo
+{
+  BagInfo() = default;
+
+  std::vector<std::shared_ptr<rosbag::Bag>> bags;
+  rosbag::View                              full_view;
+};
+
+Rosbag1Dataset::Rosbag1Dataset() : bag_reader_(std::make_shared<BagInfo>())
 {
   this->setLoggerName("Rosbag1Dataset");
   tfBuffer_ = std::make_shared<tf2::BufferCore>();
@@ -98,21 +108,24 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   YAML_LOAD_MEMBER_OPT(read_ahead_length, size_t);
   paused_ = cfg.getOrDefault<bool>("start_paused", paused_);
 
-  const bool isFile = !isDir && mrpt::system::fileExists(rosbag_filename_);
-
+  const bool isFile = mrpt::system::fileExists(rosbag_filename_);
   ASSERTMSG_(isFile, "'"s + rosbag_filename_ + "' is not an existing file."s);
 
   // Open input ros bag:
-  rosbag::Bag bag;
-  bag.open(rosbag_filename_, rosbag::bagmode::Read);
-
-  MRPT_LOG_INFO_STREAM("Opening: " << rosbag_filename_);
-
-  // Create a view over the bag
-  rosbag::View view(bag);
+  // TODO(jlbc): If a directory is provided, use rosbag::View to open several bags
+  for (auto& file : std::vector<std::string>({rosbag_filename_}))
+  {
+    ASSERT_FILE_EXISTS_(file);
+    MRPT_LOG_INFO_STREAM("Opening: " << file);
+    std::cout << "Opening: " << file << std::endl;
+    auto bag = std::make_shared<rosbag::Bag>();
+    bag->open(file);
+    bag_reader_->bags.push_back(bag);
+    bag_reader_->full_view.addQuery(*bag);
+  }
 
   // Message count
-  bagMessageCount_ = view.size();
+  bagMessageCount_ = bag_reader_->full_view.size();
 
   MRPT_LOG_INFO_STREAM("List of topics found in the bag (" << bagMessageCount_ << " msgs)");
 
@@ -120,7 +133,8 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   std::map<std::string, std::string> topic2type;
 
   // Extract topic/type info
-  const std::vector<const rosbag::ConnectionInfo*>& connections = view.getConnections();
+  const std::vector<const rosbag::ConnectionInfo*>& connections =
+      bag_reader_->full_view.getConnections();
 
   for (const auto& connection : connections)
   {
@@ -177,9 +191,9 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   }
 
   // Start creating topic observers for /tf and all sensors:
-  lookup_["/tf"].emplace_back([=](const rosbag2_storage::SerializedBagMessage& rosmsg)
+  lookup_["/tf"].emplace_back([=](const rosbag::MessageInstance& rosmsg)
                               { return toTf<false>(rosmsg); });
-  lookup_["/tf_static"].emplace_back([=](const rosbag2_storage::SerializedBagMessage& rosmsg)
+  lookup_["/tf_static"].emplace_back([=](const rosbag::MessageInstance& rosmsg)
                                      { return toTf<true>(rosmsg); });
 
   for (auto& sensorNode : sensorsYaml.asSequence())
@@ -226,7 +240,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
 
     if (sensorType == "CObservationPointCloud")
     {
-      auto callback = [=](const rosbag2_storage::SerializedBagMessage& m)
+      auto callback = [=](const rosbag::MessageInstance& m)
       { return catchExceptions([=]() { return toPointCloud2(sensorLabel, m, fixedSensorPose); }); };
       lookup_[topic].emplace_back(callback);
     }
@@ -244,39 +258,39 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
 #endif
     else if (sensorType == "CObservationImage")
     {
-      auto callback = [=](const rosbag2_storage::SerializedBagMessage& m)
+      auto callback = [=](const rosbag::MessageInstance& m)
       { return catchExceptions([=]() { return toImage(sensorLabel, m, fixedSensorPose); }); };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservation2DRangeScan")
     {
-      auto callback = [=](const rosbag2_storage::SerializedBagMessage& m)
+      auto callback = [=](const rosbag::MessageInstance& m)
       { return catchExceptions([=]() { return toLidar2D(sensorLabel, m, fixedSensorPose); }); };
 
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationRotatingScan")
     {
-      auto callback = [=](const rosbag2_storage::SerializedBagMessage& m) {
+      auto callback = [=](const rosbag::MessageInstance& m) {
         return catchExceptions([=]() { return toRotatingScan(sensorLabel, m, fixedSensorPose); });
       };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationIMU")
     {
-      auto callback = [=](const rosbag2_storage::SerializedBagMessage& m)
+      auto callback = [=](const rosbag::MessageInstance& m)
       { return catchExceptions([=]() { return toIMU(sensorLabel, m, fixedSensorPose); }); };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationGPS")
     {
-      auto callback = [=](const rosbag2_storage::SerializedBagMessage& m)
+      auto callback = [=](const rosbag::MessageInstance& m)
       { return catchExceptions([=]() { return toGPS(sensorLabel, m, fixedSensorPose); }); };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationOdometry")
     {
-      auto callback = [=](const rosbag2_storage::SerializedBagMessage& m)
+      auto callback = [=](const rosbag::MessageInstance& m)
       { return catchExceptions([=]() { return toOdometry(sensorLabel, m); }); };
       lookup_[topic].emplace_back(callback);
     }
@@ -591,7 +605,7 @@ bool Rosbag1Dataset::findOutSensorPose(
 }
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
-    std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
   rclcpp::SerializedMessage                                   serMsg(*rosmsg.serialized_data);
@@ -688,7 +702,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
 }
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toLidar2D(
-    std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
   rclcpp::SerializedMessage                                 serMsg(*rosmsg.serialized_data);
@@ -714,7 +728,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toLidar2D(
 }
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toRotatingScan(
-    std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
   rclcpp::SerializedMessage                                   serMsg(*rosmsg.serialized_data);
@@ -754,7 +768,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toRotatingScan(
 }
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toIMU(
-    std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
   rclcpp::SerializedMessage                           serMsg(*rosmsg.serialized_data);
@@ -779,7 +793,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toIMU(
 }
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toGPS(
-    std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
   rclcpp::SerializedMessage                                 serMsg(*rosmsg.serialized_data);
@@ -804,7 +818,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toGPS(
 }
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toOdometry(
-    std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg)
+    std::string_view label, const rosbag::MessageInstance& rosmsg)
 {
   rclcpp::SerializedMessage                             serMsg(*rosmsg.serialized_data);
   static rclcpp::Serialization<nav_msgs::msg::Odometry> serializer;
@@ -830,7 +844,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toOdometry(
 }
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
-    std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
   rclcpp::SerializedMessage                             serMsg(*rosmsg.serialized_data);
@@ -856,7 +870,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
 }
 
 template <bool isStatic>
-Rosbag1Dataset::Obs Rosbag1Dataset::toTf(const rosbag2_storage::SerializedBagMessage& rosmsg)
+Rosbag1Dataset::Obs Rosbag1Dataset::toTf(const rosbag::MessageInstance& rosmsg)
 {
   static rclcpp::Serialization<tf2_msgs::msg::TFMessage> tfSerializer;
 
@@ -880,7 +894,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toTf(const rosbag2_storage::SerializedBagMes
   return {};
 }
 
-Rosbag1Dataset::SF::Ptr Rosbag1Dataset::to_mrpt(const rosbag2_storage::SerializedBagMessage& rosmsg)
+Rosbag1Dataset::SF::Ptr Rosbag1Dataset::to_mrpt(const rosbag::MessageInstance& rosmsg)
 {
   auto rets = Rosbag1Dataset::SF::Create();
 
