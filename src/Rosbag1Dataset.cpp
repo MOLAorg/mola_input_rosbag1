@@ -10,14 +10,14 @@
  * @date   Dec 23, 2023
  */
 
-/** \defgroup mola_input_rosbag2_grp mola_input_rosbag2_grp
+/** \defgroup mola_input_rosbag1_grp mola_input_rosbag1_grp
  * RawDataSource for datasets in rosbag2 format
  *
  * Portions of this program source code are based on
  * rosbag2rawlog (MRPT project), Hunter Laux, 2018, JLBC, 2018-2024.
  */
 
-#include <mola_input_rosbag2/Rosbag2Dataset.h>
+#include <mola_input_rosbag1/Rosbag1Dataset.h>
 #include <mola_yaml/yaml_helpers.h>
 #include <mrpt/containers/yaml.h>
 #include <mrpt/core/initializer.h>
@@ -45,11 +45,11 @@
 #include <cv_bridge/cv_bridge.hpp>
 #endif
 
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+
 #include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <rclcpp/serialization.hpp>
-#include <rosbag2_cpp/converter_options.hpp>
-#include <rosbag2_cpp/readers/sequential_reader.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
@@ -62,26 +62,26 @@
 using namespace mola;
 
 // arguments: class_name, parent_class, class namespace
-IMPLEMENTS_MRPT_OBJECT(Rosbag2Dataset, RawDataSourceBase, mola)
+IMPLEMENTS_MRPT_OBJECT(Rosbag1Dataset, RawDataSourceBase, mola)
 
-MRPT_INITIALIZER(do_register_Rosbag2Dataset) { MOLA_REGISTER_MODULE(Rosbag2Dataset); }
+MRPT_INITIALIZER(do_register_Rosbag1Dataset) { MOLA_REGISTER_MODULE(Rosbag1Dataset); }
 
-Rosbag2Dataset::Rosbag2Dataset()
+Rosbag1Dataset::Rosbag1Dataset()
 {
-  this->setLoggerName("Rosbag2Dataset");
+  this->setLoggerName("Rosbag1Dataset");
   tfBuffer_ = std::make_shared<tf2::BufferCore>();
 }
 
-void Rosbag2Dataset::initialize_rds(const Yaml& c)
+void Rosbag1Dataset::initialize_rds(const Yaml& c)
 {
   using namespace std::string_literals;
 
   const std::map<std::string, std::string> mapTopic2Class = {
-      {"sensor_msgs/msg/Imu", "CObservationIMU"},
-      {"sensor_msgs/msg/Image", "CObservationImage"},
-      {"sensor_msgs/msg/PointCloud2", "CObservationPointCloud"},
-      {"sensor_msgs/msg/LaserScan", "CObservation2DRangeScan"},
-      {"sensor_msgs/msg/NavSatFix", "CObservationGPS"},
+      {"sensor_msgs/Imu", "CObservationIMU"},
+      {"sensor_msgs/Image", "CObservationImage"},
+      {"sensor_msgs/PointCloud2", "CObservationPointCloud"},
+      {"sensor_msgs/LaserScan", "CObservation2DRangeScan"},
+      {"sensor_msgs/NavSatFix", "CObservationGPS"},
   };
 
   MRPT_START
@@ -94,88 +94,38 @@ void Rosbag2Dataset::initialize_rds(const Yaml& c)
 
   YAML_LOAD_MEMBER_REQ(rosbag_filename, std::string);
   YAML_LOAD_MEMBER_OPT(time_warp_scale, double);
-  YAML_LOAD_MEMBER_OPT(rosbag_storage_id, std::string);
-  YAML_LOAD_MEMBER_OPT(rosbag_serialization, std::string);
   YAML_LOAD_MEMBER_OPT(base_link_frame_id, std::string);
   YAML_LOAD_MEMBER_OPT(read_ahead_length, size_t);
   paused_ = cfg.getOrDefault<bool>("start_paused", paused_);
 
-  const bool isDir  = mrpt::system::directoryExists(rosbag_filename_);
   const bool isFile = !isDir && mrpt::system::fileExists(rosbag_filename_);
 
-  ASSERTMSG_(
-      isFile || isDir, "'"s + rosbag_filename_ + "' is nether an existing directory or file."s);
-
-  // auto guess rosbag_storage_id from rosbag2 extension:
-  if (rosbag_storage_id_.empty())
-  {
-    if (isFile)
-    {
-      auto ext = mrpt::system::extractFileExtension(rosbag_filename_);
-      if (ext == "mcap")
-      {
-        rosbag_storage_id_ = "mcap";
-      }
-      else if (ext == "db3")
-      {
-        rosbag_storage_id_ = "sqlite3";
-      }
-      else
-      {
-        THROW_EXCEPTION_FMT(
-            "Argument 'rosbag_storage_id' was not provided and could "
-            "not "
-            "determine the rosbag2 format from unknown extension of "
-            "file "
-            "'%s'",
-            rosbag_filename_.c_str());
-      }
-    }
-    else
-    {
-      const std::string metadata_yaml = mrpt::system::pathJoin({rosbag_filename_, "metadata.yaml"});
-      ASSERT_FILE_EXISTS_(metadata_yaml);
-      const auto metadata = mrpt::containers::yaml::FromFile(metadata_yaml);
-      ASSERT_(metadata.has("rosbag2_bagfile_information"));
-      ASSERT_(metadata["rosbag2_bagfile_information"].has("storage_identifier"));
-      rosbag_storage_id_ =
-          metadata["rosbag2_bagfile_information"]["storage_identifier"].as<std::string>();
-    }
-    MRPT_LOG_INFO_STREAM("Storage identifier auto-detected: " << rosbag_storage_id_);
-  }
+  ASSERTMSG_(isFile, "'"s + rosbag_filename_ + "' is not an existing file."s);
 
   // Open input ros bag:
-  rosbag2_storage::StorageOptions storage_options;
+  rosbag::Bag bag;
+  bag.open(rosbag_filename_, rosbag::bagmode::Read);
 
-  storage_options.uri        = rosbag_filename_;
-  storage_options.storage_id = rosbag_storage_id_;
+  MRPT_LOG_INFO_STREAM("Opening: " << rosbag_filename_);
 
-  rosbag2_cpp::ConverterOptions converter_options;
-  converter_options.input_serialization_format  = rosbag_serialization_;
-  converter_options.output_serialization_format = rosbag_serialization_;
+  // Create a view over the bag
+  rosbag::View view(bag);
 
-  MRPT_LOG_INFO_STREAM("Opening: " << storage_options.uri);
+  // Message count
+  bagMessageCount_ = view.size();
 
-  reader_ = std::make_shared<rosbag2_cpp::readers::SequentialReader>();
-  reader_->open(storage_options, converter_options);
+  MRPT_LOG_INFO_STREAM("List of topics found in the bag (" << bagMessageCount_ << " msgs)");
 
-  std::vector<rosbag2_storage::TopicMetadata> topics = reader_->get_all_topics_and_types();
-
-  auto bagMetaData = reader_->get_metadata();
-  bagMessageCount_ = bagMetaData.message_count;
-
-  MRPT_LOG_INFO_STREAM(
-      "List of topics found in the bag (" << bagMessageCount_ << " msgs"
-                                          << ")");
-
-  // Build map: topic name -> type:
+  // Build map: topic name -> type
   std::map<std::string, std::string> topic2type;
 
-  for (const auto& t : topics)
-  {
-    topic2type[t.name] = t.type;
+  // Extract topic/type info
+  const std::vector<const rosbag::ConnectionInfo*>& connections = view.getConnections();
 
-    MRPT_LOG_INFO_STREAM(" " << t.name << " (" << t.type << ")");
+  for (const auto& connection : connections)
+  {
+    topic2type[connection->topic] = connection->datatype;
+    MRPT_LOG_INFO_STREAM(" " << connection->topic << " (" << connection->datatype << ")");
   }
 
   read_ahead_.clear();
@@ -339,7 +289,7 @@ void Rosbag2Dataset::initialize_rds(const Yaml& c)
   MRPT_END
 }  // end initialize()
 
-void Rosbag2Dataset::spinOnce()
+void Rosbag1Dataset::spinOnce()
 {
   using mrpt::system::timeDifference;
 
@@ -509,7 +459,7 @@ void Rosbag2Dataset::spinOnce()
   MRPT_END
 }
 
-void Rosbag2Dataset::doReadAhead(const std::optional<size_t>& requestedIndex, bool skipBufferAhead)
+void Rosbag1Dataset::doReadAhead(const std::optional<size_t>& requestedIndex, bool skipBufferAhead)
 {
   MRPT_START
 
@@ -581,14 +531,14 @@ void Rosbag2Dataset::doReadAhead(const std::optional<size_t>& requestedIndex, bo
 }
 
 // See docs in base class:
-size_t Rosbag2Dataset::datasetSize() const
+size_t Rosbag1Dataset::datasetSize() const
 {
   ASSERTMSG_(initialized_, "You must call initialize() first");
 
   return bagMessageCount_;
 }
 
-mrpt::obs::CSensoryFrame::Ptr Rosbag2Dataset::datasetGetObservations(size_t timestep) const
+mrpt::obs::CSensoryFrame::Ptr Rosbag1Dataset::datasetGetObservations(size_t timestep) const
 {
   ASSERTMSG_(initialized_, "You must call initialize() first");
 
@@ -597,7 +547,7 @@ mrpt::obs::CSensoryFrame::Ptr Rosbag2Dataset::datasetGetObservations(size_t time
     last_used_tim_index_ = timestep;
   }
 
-  auto& me = const_cast<Rosbag2Dataset&>(*this);
+  auto& me = const_cast<Rosbag1Dataset&>(*this);
 
   me.doReadAhead(timestep);
 
@@ -606,7 +556,7 @@ mrpt::obs::CSensoryFrame::Ptr Rosbag2Dataset::datasetGetObservations(size_t time
   return read_ahead_.at(timestep)->obs;
 }
 
-bool Rosbag2Dataset::findOutSensorPose(
+bool Rosbag1Dataset::findOutSensorPose(
     mrpt::poses::CPose3D& des, const std::string& frame, const std::string& referenceFrame,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose, const std::string_view label)
 {
@@ -640,7 +590,7 @@ bool Rosbag2Dataset::findOutSensorPose(
   }
 }
 
-Rosbag2Dataset::Obs Rosbag2Dataset::toPointCloud2(
+Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
     std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
@@ -737,7 +687,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toPointCloud2(
   return {ptsObs};
 }
 
-Rosbag2Dataset::Obs Rosbag2Dataset::toLidar2D(
+Rosbag1Dataset::Obs Rosbag1Dataset::toLidar2D(
     std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
@@ -763,7 +713,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toLidar2D(
   return {scanObs};
 }
 
-Rosbag2Dataset::Obs Rosbag2Dataset::toRotatingScan(
+Rosbag1Dataset::Obs Rosbag1Dataset::toRotatingScan(
     std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
@@ -803,7 +753,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toRotatingScan(
   return {obsRotScan};
 }
 
-Rosbag2Dataset::Obs Rosbag2Dataset::toIMU(
+Rosbag1Dataset::Obs Rosbag1Dataset::toIMU(
     std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
@@ -828,7 +778,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toIMU(
   return {imuObs};
 }
 
-Rosbag2Dataset::Obs Rosbag2Dataset::toGPS(
+Rosbag1Dataset::Obs Rosbag1Dataset::toGPS(
     std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
@@ -853,7 +803,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toGPS(
   return {gpsObs};
 }
 
-Rosbag2Dataset::Obs Rosbag2Dataset::toOdometry(
+Rosbag1Dataset::Obs Rosbag1Dataset::toOdometry(
     std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg)
 {
   rclcpp::SerializedMessage                             serMsg(*rosmsg.serialized_data);
@@ -879,7 +829,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toOdometry(
   return {mrptObs};
 }
 
-Rosbag2Dataset::Obs Rosbag2Dataset::toImage(
+Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
     std::string_view label, const rosbag2_storage::SerializedBagMessage& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
@@ -906,7 +856,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toImage(
 }
 
 template <bool isStatic>
-Rosbag2Dataset::Obs Rosbag2Dataset::toTf(const rosbag2_storage::SerializedBagMessage& rosmsg)
+Rosbag1Dataset::Obs Rosbag1Dataset::toTf(const rosbag2_storage::SerializedBagMessage& rosmsg)
 {
   static rclcpp::Serialization<tf2_msgs::msg::TFMessage> tfSerializer;
 
@@ -930,9 +880,9 @@ Rosbag2Dataset::Obs Rosbag2Dataset::toTf(const rosbag2_storage::SerializedBagMes
   return {};
 }
 
-Rosbag2Dataset::SF::Ptr Rosbag2Dataset::to_mrpt(const rosbag2_storage::SerializedBagMessage& rosmsg)
+Rosbag1Dataset::SF::Ptr Rosbag1Dataset::to_mrpt(const rosbag2_storage::SerializedBagMessage& rosmsg)
 {
-  auto rets = Rosbag2Dataset::SF::Create();
+  auto rets = Rosbag1Dataset::SF::Create();
 
   auto topic = rosmsg.topic_name;
 
@@ -959,7 +909,7 @@ Rosbag2Dataset::SF::Ptr Rosbag2Dataset::to_mrpt(const rosbag2_storage::Serialize
   return rets;
 }  // end to_mrpt()
 
-Rosbag2Dataset::Obs Rosbag2Dataset::catchExceptions(const std::function<Obs()>& f)
+Rosbag1Dataset::Obs Rosbag1Dataset::catchExceptions(const std::function<Obs()>& f)
 {
   try
   {
@@ -975,7 +925,7 @@ Rosbag2Dataset::Obs Rosbag2Dataset::catchExceptions(const std::function<Obs()>& 
   }
 }
 
-void Rosbag2Dataset::autoUnloadOldEntries() const
+void Rosbag1Dataset::autoUnloadOldEntries() const
 {
   const size_t MAX_UNLOAD_LEN = std::max<size_t>(10, 2 * read_ahead_length_);
 

@@ -18,8 +18,6 @@
 #include <mrpt/obs/CSensoryFrame.h>
 #include <mrpt/serialization/CArchive.h>
 
-#include <list>
-
 // forward decls to isolate build dependencies downstream:
 namespace tf2
 {
@@ -36,9 +34,9 @@ class SerializedBagMessage;
 
 namespace mola
 {
-/** RawDataSource for datasets in rosbag2 format.
+/** RawDataSource for datasets in ROS1 bag format.
  *
- *  It reads a rosbag2 file, and exposes it as a dataset
+ *  It reads a ROS1 bag file, and exposes it as a dataset
  *  with N entries, N being the number of messages in the bag.
  *  Reading them via the offline API (OfflineDatasetSource)
  *  returns empty shared_ptr observations for those messages
@@ -50,14 +48,14 @@ namespace mola
  *  to publish, and how to optionally override the sensor poses in the local
  *  robot frame.
  *
- * \ingroup mola_input_rosbag2_grp */
-class Rosbag2Dataset : public RawDataSourceBase, public OfflineDatasetSource, public Dataset_UI
+ * \ingroup mola_input_rosbag1_grp */
+class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, public Dataset_UI
 {
-  DEFINE_MRPT_OBJECT(Rosbag2Dataset, mola)
+  DEFINE_MRPT_OBJECT(Rosbag1Dataset, mola)
 
  public:
-  Rosbag2Dataset();
-  ~Rosbag2Dataset() override = default;
+  Rosbag1Dataset();
+  ~Rosbag1Dataset() override = default;
 
   // See docs in base class
   void spinOnce() override;
@@ -107,10 +105,7 @@ class Rosbag2Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
  private:
   bool        initialized_ = false;
   std::string rosbag_filename_;
-  std::string rosbag_storage_id_;  // (sqlite3|mcap) Empty = auto guess
-
-  std::string rosbag_serialization_ = "cdr";
-  std::string base_link_frame_id_   = "base_link";
+  std::string base_link_frame_id_ = "base_link";
 
   std::optional<mrpt::Clock::time_point> rosbag_begin_time_;
   size_t                                 read_ahead_length_ = 15;
