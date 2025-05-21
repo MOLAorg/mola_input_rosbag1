@@ -23,7 +23,7 @@ file(GLOB ROSLZ4_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ros_comm/utilities/roslz4/src
 
 add_library(rosbag STATIC ${ROSBAG_SRCS} ${ROSTIME_SRCS} ${CPP_COMMON_SRCS} ${ROSCPP_SERIALIZATION_SRCS} ${ROSLZ4_SRCS} ${CONSOLE_BRIDGE_SRCS})
 
-target_include_directories(rosbag PUBLIC
+target_include_directories(rosbag SYSTEM PUBLIC
     include
     console_bridge/include
     roscpp_core/cpp_common/include

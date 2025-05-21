@@ -47,17 +47,16 @@
 #include <cv_bridge/cv_bridge.hpp>
 #endif
 
+#include <nav_msgs/odometry.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
-#include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/imu.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
-#include <std_msgs/msg/int32.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2_msgs/msg/tf_message.hpp>
 
@@ -168,10 +167,9 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     // create list automatically:
     sensorsYaml = mrpt::containers::yaml::Sequence();
 
-    for (const auto& t : topics)
+    for (const auto& [topic, topicType] : topic2type)
     {
-      auto itType = mapTopic2Class.find(t.type);
-      if (itType == mapTopic2Class.end())
+      if (auto itType = mapTopic2Class.find(topicType); itType == mapTopic2Class.end())
       {
         MRPT_LOG_INFO_FMT(
             "- Skipped %25s (%30s): no known mapping to MOLA", t.name.c_str(), t.type.c_str());
@@ -212,18 +210,15 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     else
     {
       ASSERTMSG_(
-          topic2type.count(topic), mrpt::format(
-                                       "'sensors' contains topic '%s' which is not found in the "
-                                       "rosbag!",
-                                       topic.c_str()));
+          topic2type.count(topic),
+          mrpt::format(
+              "'sensors' contains topic '%s' which is not found in the rosbag!", topic.c_str()));
 
-      auto itType = mapTopic2Class.find(topic2type.at(topic));
-      if (itType == mapTopic2Class.end())
+      if (auto itType = mapTopic2Class.find(topic2type.at(topic)); itType == mapTopic2Class.end())
       {
         THROW_EXCEPTION_FMT(
-            "'sensors' contains topic '%s' without a 'type' entry, but "
-            "could not automatically determine its mapping to "
-            "mrpt::obs classes.",
+            "'sensors' contains topic '%s' without a 'type' entry, but could not automatically "
+            "determine its mapping to mrpt::obs classes.",
             topic.c_str());
       }
       sensorType = itType->second;
@@ -271,7 +266,8 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     }
     else if (sensorType == "CObservationRotatingScan")
     {
-      auto callback = [=](const rosbag::MessageInstance& m) {
+      auto callback = [=](const rosbag::MessageInstance& m)
+      {
         return catchExceptions([=]() { return toRotatingScan(sensorLabel, m, fixedSensorPose); });
       };
       lookup_[topic].emplace_back(callback);
@@ -608,11 +604,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
     std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
-  rclcpp::SerializedMessage                                   serMsg(*rosmsg.serialized_data);
-  static rclcpp::Serialization<sensor_msgs::msg::PointCloud2> serializer;
-
-  sensor_msgs::msg::PointCloud2 pts;
-  serializer.deserialize_message(&serMsg, &pts);
+  auto pts = rosmsg.instantiate<sensor_msgs::PointCloud2>();
 
   auto ptsObs         = mrpt::obs::CObservationPointCloud::Create();
   ptsObs->sensorLabel = label;
@@ -705,11 +697,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toLidar2D(
     std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
-  rclcpp::SerializedMessage                                 serMsg(*rosmsg.serialized_data);
-  static rclcpp::Serialization<sensor_msgs::msg::LaserScan> serializer;
-
-  sensor_msgs::msg::LaserScan scan;
-  serializer.deserialize_message(&serMsg, &scan);
+  auto scan = rosmsg.instantiate<sensor_msgs::LaserScan>();
 
   auto scanObs = mrpt::obs::CObservation2DRangeScan::Create();
 
