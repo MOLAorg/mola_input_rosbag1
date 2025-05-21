@@ -59,8 +59,12 @@ mola_add_library(
 
 # Add vendored version of ROS1:
 # Must be after the library above to avoid poluting its global compiler flags, etc. 
-add_subdirectory(thirdparty EXCLUDE_FROM_ALL)
+add_subdirectory(ros1 EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PRIVATE rosbag)
+
+# Add submodule: mrpt_ros1bridge
+add_subdirectory(mrpt_ros_bridge EXCLUDE_FROM_ALL)
+target_link_libraries(${PROJECT_NAME} PRIVATE mrpt_ros1bridge)
 
 
 # Credits: https://gist.github.com/jtanx/96ded5e050d5ee5b19804195ee5cf5f9

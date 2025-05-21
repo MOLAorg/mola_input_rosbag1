@@ -28,12 +28,12 @@
 #include <mrpt/obs/CObservationOdometry.h>
 #include <mrpt/obs/CObservationPointCloud.h>
 #include <mrpt/obs/CObservationRotatingScan.h>
-#include <mrpt/ros2bridge/gps.h>
-#include <mrpt/ros2bridge/imu.h>
-#include <mrpt/ros2bridge/laser_scan.h>
-#include <mrpt/ros2bridge/point_cloud2.h>
-#include <mrpt/ros2bridge/pose.h>
-#include <mrpt/ros2bridge/time.h>
+#include <mrpt/ros1bridge/gps.h>
+#include <mrpt/ros1bridge/imu.h>
+#include <mrpt/ros1bridge/laser_scan.h>
+#include <mrpt/ros1bridge/point_cloud2.h>
+#include <mrpt/ros1bridge/pose.h>
+#include <mrpt/ros1bridge/time.h>
 #include <mrpt/system/filesystem.h>
 #include <tf2/buffer_core.h>
 #include <tf2/convert.h>
@@ -47,18 +47,18 @@
 #include <cv_bridge/cv_bridge.hpp>
 #endif
 
-#include <nav_msgs/odometry.h>
+// Vendored ROS1 headers:
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud2.h>
 
-#include <rclcpp/rclcpp.hpp>
-#include <sensor_msgs/msg/camera_info.hpp>
-#include <sensor_msgs/msg/image.hpp>
-#include <sensor_msgs/msg/imu.hpp>
-#include <sensor_msgs/msg/laser_scan.hpp>
-#include <sensor_msgs/msg/point_cloud2.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_msgs/msg/tf_message.hpp>
+// #include <nav_msgs/odometry.h>
+// #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+// #include <tf2_msgs/msg/tf_message.hpp>
 
 using namespace mola;
 
