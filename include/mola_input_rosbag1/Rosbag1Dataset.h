@@ -18,6 +18,16 @@
 #include <mrpt/obs/CSensoryFrame.h>
 #include <mrpt/serialization/CArchive.h>
 
+// Vendored ROS1 headers:
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
+#include <sensor_msgs/CameraInfo.h>
+#include <sensor_msgs/Image.h>
+#include <sensor_msgs/Imu.h>
+#include <sensor_msgs/LaserScan.h>
+#include <sensor_msgs/PointCloud2.h>
+
+
 // forward decls to isolate build dependencies downstream:
 namespace tf2
 {

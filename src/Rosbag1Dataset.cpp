@@ -28,17 +28,20 @@
 #include <mrpt/obs/CObservationOdometry.h>
 #include <mrpt/obs/CObservationPointCloud.h>
 #include <mrpt/obs/CObservationRotatingScan.h>
+#include <mrpt/system/filesystem.h>
+
+#if 0
 #include <mrpt/ros1bridge/gps.h>
 #include <mrpt/ros1bridge/imu.h>
 #include <mrpt/ros1bridge/laser_scan.h>
 #include <mrpt/ros1bridge/point_cloud2.h>
 #include <mrpt/ros1bridge/pose.h>
 #include <mrpt/ros1bridge/time.h>
-#include <mrpt/system/filesystem.h>
+#endif
+
+#if 0
 #include <tf2/convert.h>
 #include <tf2/exceptions.h>
-
-#include <memory>
 #include <tf2/buffer_core.hpp>
 
 #if CV_BRIDGE_VERSION < 0x030400
@@ -46,19 +49,13 @@
 #else
 #include <cv_bridge/cv_bridge.hpp>
 #endif
-
-// Vendored ROS1 headers:
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <sensor_msgs/CameraInfo.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/PointCloud2.h>
+#endif
 
 // #include <nav_msgs/odometry.h>
 // #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 // #include <tf2_msgs/msg/tf_message.hpp>
+
+#include <memory>
 
 using namespace mola;
 
@@ -172,7 +169,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       if (auto itType = mapTopic2Class.find(topicType); itType == mapTopic2Class.end())
       {
         MRPT_LOG_INFO_FMT(
-            "- Skipped %25s (%30s): no known mapping to MOLA", t.name.c_str(), t.type.c_str());
+            "- Skipped %25s (%30s): no known mapping to MOLA", topic.c_str(), topicType.c_str());
         continue;
       }
 
