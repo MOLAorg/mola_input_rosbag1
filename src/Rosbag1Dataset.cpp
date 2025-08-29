@@ -30,14 +30,12 @@
 #include <mrpt/obs/CObservationRotatingScan.h>
 #include <mrpt/system/filesystem.h>
 
-#if 0
 #include <mrpt/ros1bridge/gps.h>
 #include <mrpt/ros1bridge/imu.h>
 #include <mrpt/ros1bridge/laser_scan.h>
 #include <mrpt/ros1bridge/point_cloud2.h>
 #include <mrpt/ros1bridge/pose.h>
 #include <mrpt/ros1bridge/time.h>
-#endif
 
 #if 0
 #include <tf2/convert.h>
@@ -166,7 +164,8 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
 
     for (const auto& [topic, topicType] : topic2type)
     {
-      if (auto itType = mapTopic2Class.find(topicType); itType == mapTopic2Class.end())
+      auto itType = mapTopic2Class.find(topicType); 
+      if (itType == mapTopic2Class.end())
       {
         MRPT_LOG_INFO_FMT(
             "- Skipped %25s (%30s): no known mapping to MOLA", topic.c_str(), topicType.c_str());
@@ -175,13 +174,13 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
 
       mrpt::containers::yaml s = mrpt::containers::yaml::Map();
 
-      s["topic"] = t.name;
-      s["type"]  = itType->second;
+      s["topic"] = topic;
+      s["type"]  = topicType;
 
       sensorsYaml.push_back(s);
 
       MRPT_LOG_INFO_FMT(
-          "- ADDED   %25s (%30s): as %s", t.name.c_str(), t.type.c_str(), itType->second.c_str());
+          "- ADDED   %25s (%30s): as %s", topic.c_str(), topicType.c_str(), itType->second.c_str());
     }
   }
 
@@ -203,7 +202,9 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     std::string sensorType;
 
     if (sensor.count("type"))
+    {
       sensorType = sensor.at("type").as<std::string>();
+    }
     else
     {
       ASSERTMSG_(
@@ -579,7 +580,7 @@ bool Rosbag1Dataset::findOutSensorPose(
 
     tf2::Transform tf;
     tf2::fromMsg(ref_to_trgFrame.transform, tf);
-    des = mrpt::ros2bridge::fromROS(tf);
+    des = mrpt::ros1bridge::fromROS(tf);
 
     MRPT_LOG_DEBUG_FMT(
         "[findOutSensorPose] Found pose %s -> %s: %s", referenceFrame.c_str(), frame.c_str(),
@@ -604,14 +605,14 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
 
   auto ptsObs         = mrpt::obs::CObservationPointCloud::Create();
   ptsObs->sensorLabel = label;
-  ptsObs->timestamp   = mrpt::ros2bridge::fromROS(pts.header.stamp);
+  ptsObs->timestamp   = mrpt::ros1bridge::fromROS(pts.header.stamp);
 
   bool sensorPoseOK = findOutSensorPose(
       ptsObs->sensorPose, pts.header.frame_id, base_link_frame_id_, fixedSensorPose, label);
   ASSERT_(sensorPoseOK);
 
   // Convert points:
-  std::set<std::string> fields = mrpt::ros2bridge::extractFields(pts);
+  std::set<std::string> fields = mrpt::ros1bridge::extractFields(pts);
 
   // We need X Y Z:
   if (!fields.count("x") || !fields.count("y") || !fields.count("z"))
@@ -626,7 +627,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
     auto mrptPts       = mrpt::maps::CPointsMapXYZIRT::Create();
     ptsObs->pointcloud = mrptPts;
 
-    if (!mrpt::ros2bridge::fromROS(pts, *mrptPts))
+    if (!mrpt::ros1bridge::fromROS(pts, *mrptPts))
     {
       THROW_EXCEPTION(
           "Could not convert pointcloud from ROS to "
@@ -661,7 +662,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
     auto mrptPts       = mrpt::maps::CPointsMapXYZI::Create();
     ptsObs->pointcloud = mrptPts;
 
-    if (!mrpt::ros2bridge::fromROS(pts, *mrptPts))
+    if (!mrpt::ros1bridge::fromROS(pts, *mrptPts))
     {
       MRPT_LOG_ONCE_WARN(
           "Could not convert pointcloud from ROS to "
@@ -678,7 +679,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
     auto mrptPts       = mrpt::maps::CSimplePointsMap::Create();
     ptsObs->pointcloud = mrptPts;
 
-    if (!mrpt::ros2bridge::fromROS(pts, *mrptPts))
+    if (!mrpt::ros1bridge::fromROS(pts, *mrptPts))
     {
       THROW_EXCEPTION(
           "Could not convert pointcloud from ROS to "
@@ -699,10 +700,10 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toLidar2D(
 
   // Extract sensor pose from tf frames, if enabled:
   mrpt::poses::CPose3D sensorPose;
-  mrpt::ros2bridge::fromROS(scan, sensorPose, *scanObs);
+  mrpt::ros1bridge::fromROS(scan, sensorPose, *scanObs);
 
   scanObs->sensorLabel = label;
-  scanObs->timestamp   = mrpt::ros2bridge::fromROS(scan.header.stamp);
+  scanObs->timestamp   = mrpt::ros1bridge::fromROS(scan.header.stamp);
 
   bool sensorPoseOK = findOutSensorPose(
       scanObs->sensorPose, scan.header.frame_id, base_link_frame_id_, fixedSensorPose, label);
@@ -722,7 +723,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toRotatingScan(
   serializer.deserialize_message(&serMsg, &pts);
 
   // Convert points:
-  std::set<std::string> fields = mrpt::ros2bridge::extractFields(pts);
+  std::set<std::string> fields = mrpt::ros1bridge::extractFields(pts);
 
   // We need X Y Z:
   if (!fields.count("x") || !fields.count("y") || !fields.count("z") || !fields.count("ring"))
@@ -734,7 +735,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toRotatingScan(
   auto                       obsRotScan = mrpt::obs::CObservationRotatingScan::Create();
   const mrpt::poses::CPose3D sensorPose;
 
-  if (!mrpt::ros2bridge::fromROS(pts, *obsRotScan, sensorPose))
+  if (!mrpt::ros1bridge::fromROS(pts, *obsRotScan, sensorPose))
   {
     THROW_EXCEPTION(
         "Could not convert pointcloud from ROS to "
@@ -742,7 +743,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toRotatingScan(
   }
 
   obsRotScan->sensorLabel = label;
-  obsRotScan->timestamp   = mrpt::ros2bridge::fromROS(pts.header.stamp);
+  obsRotScan->timestamp   = mrpt::ros1bridge::fromROS(pts.header.stamp);
 
   bool sensorPoseOK = findOutSensorPose(
       obsRotScan->sensorPose, pts.header.frame_id, base_link_frame_id_, fixedSensorPose, label);
@@ -764,10 +765,10 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toIMU(
   auto imuObs = mrpt::obs::CObservationIMU::Create();
 
   imuObs->sensorLabel = label;
-  imuObs->timestamp   = mrpt::ros2bridge::fromROS(imu.header.stamp);
+  imuObs->timestamp   = mrpt::ros1bridge::fromROS(imu.header.stamp);
 
   // Convert data:
-  mrpt::ros2bridge::fromROS(imu, *imuObs);
+  mrpt::ros1bridge::fromROS(imu, *imuObs);
 
   bool sensorPoseOK = findOutSensorPose(
       imuObs->sensorPose, imu.header.frame_id, base_link_frame_id_, fixedSensorPose, label);
@@ -789,10 +790,10 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toGPS(
   auto gpsObs = mrpt::obs::CObservationGPS::Create();
 
   gpsObs->sensorLabel = label;
-  gpsObs->timestamp   = mrpt::ros2bridge::fromROS(gps.header.stamp);
+  gpsObs->timestamp   = mrpt::ros1bridge::fromROS(gps.header.stamp);
 
   // Convert data:
-  mrpt::ros2bridge::fromROS(gps, *gpsObs);
+  mrpt::ros1bridge::fromROS(gps, *gpsObs);
 
   bool sensorPoseOK = findOutSensorPose(
       gpsObs->sensorPose, gps.header.frame_id, base_link_frame_id_, fixedSensorPose, label);
@@ -813,10 +814,10 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toOdometry(
   auto mrptObs = mrpt::obs::CObservationOdometry::Create();
 
   mrptObs->sensorLabel = label;
-  mrptObs->timestamp   = mrpt::ros2bridge::fromROS(odo.header.stamp);
+  mrptObs->timestamp   = mrpt::ros1bridge::fromROS(odo.header.stamp);
 
   // Convert data:
-  const auto pose   = mrpt::ros2bridge::fromROS(odo.pose);
+  const auto pose   = mrpt::ros1bridge::fromROS(odo.pose);
   mrptObs->odometry = {pose.mean.x(), pose.mean.y(), pose.mean.yaw()};
 
   mrptObs->hasVelocities       = true;
@@ -840,7 +841,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
   auto imgObs = mrpt::obs::CObservationImage::Create();
 
   imgObs->sensorLabel = label;
-  imgObs->timestamp   = mrpt::ros2bridge::fromROS(image->header.stamp);
+  imgObs->timestamp   = mrpt::ros1bridge::fromROS(image->header.stamp);
 
   auto cv_ptr = cv_bridge::toCvShare(image);
 

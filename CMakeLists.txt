@@ -114,6 +114,10 @@ target_include_directories(mrpt_ros1bridge
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/mrpt_ros_bridge/ros1bridge/include
 )
+target_include_directories(${PROJECT_NAME}
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/mrpt_ros_bridge/ros1bridge/include
+)
 
 #target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads) # for WorkerThreads
 
