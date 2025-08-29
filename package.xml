@@ -16,13 +16,15 @@
   <depend>cv_bridge</depend>
   <depend>mola_kernel</depend>
   <depend>mrpt_libobs</depend>
-  <depend>mrpt_libros_bridge</depend>
+  <depend>mrpt_libmaps</depend>
+  <!-- <depend>mrpt_libros_bridge</depend> Added here as a submodule until MRPT3  -->
   <depend>sensor_msgs</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_msgs</depend>
   <depend>tf2_ros</depend>
-  
   <doc_depend>doxygen</doc_depend>
+
+  <depend>mrpt_common</depend>
 
   <!-- Minimum entries to release non-catkin pkgs: -->
   <buildtool_depend>cmake</buildtool_depend>

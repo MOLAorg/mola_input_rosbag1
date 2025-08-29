@@ -10,21 +10,21 @@
 cmake_minimum_required(VERSION 3.5)
 
 # Tell CMake we'll use C++ for use in its tests/flags
-project(mola_input_rosbag1 LANGUAGES CXX)
+project(mola_input_rosbag1 LANGUAGES C CXX)
 
 # MOLA CMake scripts: "mola_xxx()"
 find_package(mola_common REQUIRED)
 # find dependencies:
 find_package(mrpt-obs REQUIRED)
-find_package(mrpt-ros2bridge REQUIRED)
-
-find_package(tf2_ros REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(rosbag2_cpp REQUIRED)
-find_package(tf2_msgs REQUIRED)
-find_package(cv_bridge REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
+find_package(mrpt-maps REQUIRED)
+#find_package(mrpt-ros1bridge REQUIRED)
+#find_package(tf2_ros REQUIRED)
+#find_package(nav_msgs REQUIRED)
+#find_package(sensor_msgs REQUIRED)
+#find_package(rosbag2_cpp REQUIRED)
+#find_package(tf2_msgs REQUIRED)
+#find_package(cv_bridge REQUIRED)
+#find_package(tf2_geometry_msgs REQUIRED)
 
 find_mola_package(mola_kernel)
 
@@ -44,17 +44,18 @@ mola_add_library(
   PRIVATE_LINK_LIBRARIES
     mola::mola_kernel
     mrpt::obs
-    mrpt::ros2bridge
-    tf2::tf2
-    rosbag2_cpp::rosbag2_cpp
-    tf2_geometry_msgs::tf2_geometry_msgs
-    tf2_msgs::tf2_msgs__rosidl_typesupport_cpp
-    sensor_msgs::sensor_msgs_library
-    cv_bridge::cv_bridge
+    mrpt::maps
+    #mrpt::ros1bridge
+    #tf2::tf2
+    #rosbag2_cpp::rosbag2_cpp
+    #tf2_geometry_msgs::tf2_geometry_msgs
+    #tf2_msgs::tf2_msgs__rosidl_typesupport_cpp
+    #sensor_msgs::sensor_msgs_library
+    #cv_bridge::cv_bridge
   CMAKE_DEPENDENCIES
     mola_kernel
     mrpt-obs
-    mrpt-ros2bridge
+    #mrpt-ros1bridge  (internal to this package for now)
 )
 
 # Add vendored version of ROS1:
@@ -64,46 +65,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE rosbag)
 
 # Add submodule: mrpt_ros1bridge
 add_subdirectory(mrpt_ros_bridge/ros1bridge EXCLUDE_FROM_ALL)
-target_link_libraries(${PROJECT_NAME} PRIVATE mrpt_ros1bridge)
-
-
-# Credits: https://gist.github.com/jtanx/96ded5e050d5ee5b19804195ee5cf5f9
-function(pad_string output str padchar length)
-  string(LENGTH "${str}" _strlen)
-  math(EXPR _strlen "${length} - ${_strlen}")
-
-  if(_strlen GREATER 0)
-    string(REPEAT ${padchar} ${_strlen} _pad)
-    string(PREPEND str ${_pad})
-  endif()
-
-  set(${output} "${str}" PARENT_SCOPE)
-endfunction()
-
-# 2 hex digits for each version part:
-# For example: "0.5.1"  => "0x000501"
-macro(mrpt_version_to_hex VER TARGET_VAR_NAME)
-  string(REGEX MATCHALL "[0-9]+" __parts "${${VER}}")
-
-  if(__parts)
-    list(GET __parts 0 __VERSION_NUMBER_MAJOR)
-    list(GET __parts 1 __VERSION_NUMBER_MINOR)
-    list(GET __parts 2 __VERSION_NUMBER_PATCH)
-    pad_string(__VERSION_NUMBER_MAJOR ${__VERSION_NUMBER_MAJOR} "0" 2)
-    pad_string(__VERSION_NUMBER_MINOR ${__VERSION_NUMBER_MINOR} "0" 2)
-    pad_string(__VERSION_NUMBER_PATCH ${__VERSION_NUMBER_PATCH} "0" 2)
-    set(${TARGET_VAR_NAME} "0x${__VERSION_NUMBER_MAJOR}${__VERSION_NUMBER_MINOR}${__VERSION_NUMBER_PATCH}")
-  else()
-    set(${TARGET_VAR_NAME} "0x000")
-  endif()
-endmacro()
+#target_link_libraries(${PROJECT_NAME} PRIVATE mrpt::mrpt_ros1bridge)
 
 # Convert package versions to hex so they can be used in preprocessor for wider
 # versions compatibility of "one-source for all":
-mrpt_version_to_hex(cv_bridge_VERSION  cv_bridge_VERSION_HEX)
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE CV_BRIDGE_VERSION=${cv_bridge_VERSION_HEX})
-
-message(STATUS "Found: cv_bridge_VERSION: ${cv_bridge_VERSION} (${cv_bridge_VERSION_HEX})")
+#mola_version_to_hex(${cv_bridge_VERSION}  cv_bridge_VERSION_HEX)
+#target_compile_definitions(${PROJECT_NAME} PRIVATE CV_BRIDGE_VERSION=${cv_bridge_VERSION_HEX})
+#message(STATUS "Found: cv_bridge_VERSION: ${cv_bridge_VERSION} (${cv_bridge_VERSION_HEX})")
 
 
