@@ -14,21 +14,19 @@
 #include <mola_kernel/interfaces/Dataset_UI.h>
 #include <mola_kernel/interfaces/OfflineDatasetSource.h>
 #include <mola_kernel/interfaces/RawDataSourceBase.h>
-#include <mrpt/io/CFileGZInputStream.h>
 #include <mrpt/obs/CSensoryFrame.h>
-#include <mrpt/serialization/CArchive.h>
+#include <mrpt/poses/CPose3D.h>
 
-// Vendored ROS1 headers:
-#include <rosbag/bag.h>
-#include <rosbag/view.h>
-#include <sensor_msgs/CameraInfo.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/Imu.h>
-#include <sensor_msgs/LaserScan.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <deque>
+#include <functional>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <vector>
 
-
-// forward decls to isolate build dependencies downstream:
+// Forward declarations to isolate the vendored ROS1 / tf2 build dependencies,
+// so that downstream code including this header does not need them:
 namespace tf2
 {
 class BufferCore;

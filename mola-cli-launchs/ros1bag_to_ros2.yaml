@@ -1,0 +1,58 @@
+# -----------------------------------------------------------------------------
+#                        SLAM system definition for MOLA
+#
+# This file turns MOLA into a ROS 1 -> ROS 2 bridge: it reads a ROS 1 ".bag"
+# file (no ROS 1 installation required) and re-publishes its sensor streams as
+# ROS 2 topics, with /tf, in real time.
+#
+# Example of usage:
+#   ROSBAG1_FILE=/path/to/dataset.bag \
+#     mola-cli src/mola_input_rosbag1/mola-cli-launchs/ros1bag_to_ros2.yaml
+#
+# Then, in another terminal (with ROS 2 sourced):
+#   ros2 topic list
+#   rviz2
+#
+# Optional environment variables:
+#   ROSBAG1_FILE         (REQUIRED) path to the input .bag file.
+#   MOLA_WITH_GUI        'true' (default) to also open the MOLA visualizer.
+#   MOLA_DATASET_START_PAUSED  'true' to start paused (default: false).
+# -----------------------------------------------------------------------------
+
+modules:
+  # Offline or online sensory data source =====================
+  - type: mola::Rosbag1Dataset
+    name: rosbag1_input
+    execution_rate: 50 # Hz
+    #verbosity_level: DEBUG
+    params:
+      rosbag_filename: ${ROSBAG1_FILE}
+      # (Set MOLA_BASE_LINK_FRAME to match your bag, e.g. 'r1/base_link'.)
+      base_link_frame_id: ${MOLA_BASE_LINK_FRAME|base_link}
+      time_warp_scale: 1.0
+      start_paused: ${MOLA_DATASET_START_PAUSED|false}
+      # See ros1bag_just_view.yaml for the optional 'sensors' configuration.
+
+  # MOLA -> ROS 2 bridge  =====================
+  - type: mola::BridgeROS2
+    name: ros2_bridge
+    execution_rate: 50 # Hz
+    #verbosity_level: INFO
+    params:
+      # The raw observations coming from the dataset are automatically
+      # forwarded and published as ROS 2 topics by this bridge.
+      #
+      # The robot body frame and the (map) reference frame used for /tf:
+      base_link_frame: base_link
+      reference_frame: map
+
+      # No SLAM module here, so do not expect SLAM poses:
+      publish_odometry_msgs_from_slam: false
+
+  # ========================
+  # MolaViz
+  # (remove this module if you only want the ROS 2 bridge with no GUI)
+  # ========================
+  - name: viz
+    type: ${MOLA_GUI_MODULE|mola::MolaVizImGui}
+    params: ~ # none

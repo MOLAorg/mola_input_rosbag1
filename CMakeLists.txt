@@ -17,14 +17,13 @@ find_package(mola_common REQUIRED)
 # find dependencies:
 find_package(mrpt-obs REQUIRED)
 find_package(mrpt-maps REQUIRED)
-#find_package(mrpt-ros1bridge REQUIRED)
+# ROS1 (de)serialization and message definitions are vendored (see ros1/ and
+# mrpt_ros_bridge/ subdirectories), so a ROS1 installation is NOT required.
+# We only use ROS2 tf2 for the transform tree:
+find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
-#find_package(nav_msgs REQUIRED)
-#find_package(sensor_msgs REQUIRED)
-#find_package(rosbag2_cpp REQUIRED)
-#find_package(tf2_msgs REQUIRED)
-#find_package(cv_bridge REQUIRED)
-#find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
 
 find_mola_package(mola_kernel)
 
@@ -47,11 +46,8 @@ mola_add_library(
     mrpt::maps
     mrpt_ros1bridge
     tf2::tf2
-    #rosbag2_cpp::rosbag2_cpp
-    #tf2_geometry_msgs::tf2_geometry_msgs
-    #tf2_msgs::tf2_msgs__rosidl_typesupport_cpp
-    #sensor_msgs::sensor_msgs_library
-    #cv_bridge::cv_bridge
+    tf2_geometry_msgs::tf2_geometry_msgs
+    ${geometry_msgs_TARGETS}
   CMAKE_DEPENDENCIES
     mola_kernel
     mrpt-obs

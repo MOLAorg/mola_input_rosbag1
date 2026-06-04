@@ -13,14 +13,16 @@
 
   <url type="website">https://github.com/MOLAorg/mola_input_ros1bag</url>
 
-  <depend>cv_bridge</depend>
   <depend>mola_kernel</depend>
   <depend>mrpt_libobs</depend>
   <depend>mrpt_libmaps</depend>
-  <!-- <depend>mrpt_libros_bridge</depend> Added here as a submodule until MRPT3  -->
-  <depend>sensor_msgs</depend>
+  <!-- mrpt_libros_bridge is vendored here as a git submodule (mrpt_ros_bridge/)
+       until it is released within MRPT itself. -->
+  <!-- ROS1 message definitions and rosbag (de)serialization are vendored under
+       ros1/, so no ROS1 installation is required. -->
+  <depend>geometry_msgs</depend>
+  <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
-  <depend>tf2_msgs</depend>
   <depend>tf2_ros</depend>
   <doc_depend>doxygen</doc_depend>
 
