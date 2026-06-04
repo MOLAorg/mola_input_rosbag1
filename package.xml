@@ -13,6 +13,7 @@
 
   <url type="website">https://github.com/MOLAorg/mola_input_ros1bag</url>
 
+  <depend>mola_common</depend>
   <depend>mola_kernel</depend>
   <depend>mrpt_libobs</depend>
   <depend>mrpt_libmaps</depend>
@@ -25,8 +26,6 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <doc_depend>doxygen</doc_depend>
-
-  <depend>mrpt_common</depend>
 
   <!-- Minimum entries to release non-catkin pkgs: -->
   <buildtool_depend>cmake</buildtool_depend>

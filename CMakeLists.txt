@@ -62,8 +62,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE rosbag)
 # ---------------------------------------------------
 # Add submodule: mrpt_ros1bridge
 # ---------------------------------------------------
-# MRPT CMake scripts: "mrpt_xxx()"
-find_package(mrpt_common REQUIRED)
+# It is built here as a private, internal static library, so it does NOT need
+# the "mrpt_common" CMake helpers (which are not available as a released
+# package): a plain add_library() is enough.
 
 # define lib:
 set(LIB_SRCS
@@ -95,16 +96,14 @@ set(LIB_PUBLIC_HDRS
   mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/image.h
 )
 
-mrpt_add_library(
-  TARGET mrpt_ros1bridge
-  SOURCES ${LIB_SRCS} ${LIB_PUBLIC_HDRS}
-  PUBLIC_LINK_LIBRARIES
+add_library(mrpt_ros1bridge STATIC ${LIB_SRCS} ${LIB_PUBLIC_HDRS})
+# PIC is required because this static lib is linked into the shared ${PROJECT_NAME}:
+set_target_properties(mrpt_ros1bridge PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(mrpt_ros1bridge
+  PUBLIC
    mrpt::maps
    mrpt::obs
    tf2::tf2
-#  PRIVATE_LINK_LIBRARIES
-#  CMAKE_DEPENDENCIES
-#   xxx
 )
 target_include_directories(mrpt_ros1bridge
   PRIVATE
