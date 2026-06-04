@@ -20,7 +20,15 @@
   <!-- mrpt_libros_bridge is vendored here as a git submodule (mrpt_ros_bridge/)
        until it is released within MRPT itself. -->
   <!-- ROS1 message definitions and rosbag (de)serialization are vendored under
-       ros1/, so no ROS1 installation is required. -->
+       ros1/, so no ROS1 installation is required. These are the system
+       libraries needed to build that vendored rosbag reader: -->
+  <depend>libbz2-dev</depend>
+  <depend>liblz4-dev</depend>
+  <depend>libboost-date-time-dev</depend>
+  <depend>libboost-filesystem-dev</depend>
+  <depend>libboost-program-options-dev</depend>
+  <depend>libboost-regex-dev</depend>
+
   <depend>geometry_msgs</depend>
   <depend>tf2</depend>
   <depend>tf2_geometry_msgs</depend>
