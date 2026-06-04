@@ -22,7 +22,7 @@
   <!-- ROS1 message definitions and rosbag (de)serialization are vendored under
        ros1/, so no ROS1 installation is required. These are the system
        libraries needed to build that vendored rosbag reader: -->
-  <depend>libbz2-dev</depend>
+  <depend>bzip2</depend>
   <depend>liblz4-dev</depend>
   <depend>libboost-date-time-dev</depend>
   <depend>libboost-filesystem-dev</depend>
