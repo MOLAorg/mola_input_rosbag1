@@ -11,6 +11,7 @@ jobs:
       DEBIAN_FRONTEND: noninteractive
     continue-on-error: ${{ matrix.allow_failure == true }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           # Humble Hawksbill (May 2022 - May 2027)
@@ -24,14 +25,18 @@ jobs:
             use_ros_testing: true
 
           # Kilted Kaiju (May 2025 - Dec 2026)
+          # allow_failure: MOLA/MRPT dependencies not yet released for this distro.
           - docker_image: ubuntu:noble
             ros_distribution: kilted
             use_ros_testing: true
+            allow_failure: true
 
           # Rolling Ridley (No End-Of-Life)
+          # allow_failure: MOLA/MRPT dependencies not yet released for this distro.
           - docker_image: ubuntu:noble
             ros_distribution: rolling
             use_ros_testing: true
+            allow_failure: true
 
     container:
       image: ${{ matrix.docker_image }}
