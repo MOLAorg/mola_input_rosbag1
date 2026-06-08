@@ -102,6 +102,39 @@ ROSBAG1_FILE=/path/to/dataset.bag \
   mola-cli src/mola_input_rosbag1/mola-cli-launchs/ros1bag_to_ros2.yaml
 ```
 
+## CLI tools
+
+### `rosbag1-info`
+
+An equivalent to ROS 1's `rosbag info`, but built on the vendored ROS 1 bag
+reader so it runs in a pure ROS 2 (or non-ROS) environment. Once this package
+is built and the workspace sourced, the tool is on the `PATH`:
+
+```bash
+rosbag1-info /path/to/dataset.bag
+```
+
+It prints the bag path and version, recording duration, start/end wall-clock
+times, file size, total message count, compression, the message types (with
+their md5sums), and, per topic, the message count, average frequency and type:
+
+```
+path:        /path/to/dataset.bag
+version:     2.0
+duration:    208.8s (3min 28s)
+start:       Oct 18 2022 06:12:24.58 (1666066344.58)
+end:         Oct 18 2022 06:15:53.36 (1666066553.36)
+size:        1.9 GB
+messages:    150843
+compression: none
+types:       nav_msgs/Odometry [cd5e73d190d741a2f92e81eda573aca7]
+             sensor_msgs/Imu [6a62c6daae103f4ff57a132d6f95cec2]
+             sensor_msgs/PointCloud2 [1158d486dd51d683ce2f1be655c3c181]
+topics:      /imu/data          73279 msgs @   399.6 Hz : sensor_msgs/Imu
+             /odom              37195 msgs @   200.0 Hz : nav_msgs/Odometry
+             /velodyne_points    2071 msgs @     9.9 Hz : sensor_msgs/PointCloud2
+```
+
 ## Building
 
 ```bash

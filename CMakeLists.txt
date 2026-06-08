@@ -2,7 +2,7 @@
 #        A Modular Optimization framework for Localization and mApping
 #                               (MOLA)
 #
-# Copyright (C) 2018-2025, Jose Luis Blanco-Claraco, contributors (AUTHORS.md)
+# Copyright (C) 2018-2026, Jose Luis Blanco-Claraco, contributors (AUTHORS.md)
 # All rights reserved.
 # Released under GNU GPL v3. See LICENSE file
 # ------------------------------------------------------------------------------
@@ -141,6 +141,21 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE ${ROS_DEFINITIONS})
 target_compile_definitions(${PROJECT_NAME} PRIVATE IS_MRPT_ROS1BRIDGE)
 target_compile_definitions(${PROJECT_NAME} PRIVATE CV_BRIDGE_VERSION=${cv_bridge_VERSION_HEX})
 endif()
+
+# ---------------------------------------------------
+# CLI app: "rosbag1-info" (equivalent to ROS1's `rosbag info`)
+# ---------------------------------------------------
+# A standalone tool that reads a ROS1 .bag and prints its topics, types,
+# timing stats, etc. It only needs the vendored rosbag reader, so it works
+# in a pure ROS2 (or non-ROS) environment.
+# The 'rosbag' target (vendored, see ros1/) publicly exports all the include
+# directories we need. mola_add_executable() installs it to bin/, so it lands
+# on the PATH once the workspace is sourced.
+mola_add_executable(
+  TARGET rosbag1-info
+  SOURCES apps/rosbag1-info.cpp
+  LINK_LIBRARIES rosbag
+)
 
 # ---------------------------------------------------
 
