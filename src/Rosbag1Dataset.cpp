@@ -46,6 +46,7 @@
 #include <nav_msgs/Odometry.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <sensor_msgs/CompressedImage.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/LaserScan.h>
@@ -59,6 +60,8 @@
 #include <cstring>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <memory>
+#include <opencv2/imgcodecs.hpp>
+#include <opencv2/imgproc.hpp>
 #include <tf2/buffer_core.hpp>
 #include <tf2/exceptions.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -128,10 +131,74 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
     channels    = 3;
     swapRedBlue = true;
   }
+  else if (encoding == enc::MONO16)
+  {
+    // 16-bit grayscale: scale the high byte to produce an 8-bit image.
+    mrpt::img::CImage    out;
+    std::vector<uint8_t> buf(static_cast<size_t>(w) * h);
+    for (unsigned int row = 0; row < h; row++)
+    {
+      const auto* srcRow = reinterpret_cast<const uint16_t*>(
+          image.data.data() + static_cast<size_t>(row) * image.step);
+      uint8_t* dstRow = buf.data() + static_cast<size_t>(row) * w;
+      for (unsigned int col = 0; col < w; col++)
+        dstRow[col] = static_cast<uint8_t>(srcRow[col] >> 8);
+    }
+    out.loadFromMemoryBuffer(w, h, false /*grayscale*/, buf.data());
+    return out;
+  }
+  else if (
+      encoding == enc::BAYER_RGGB8 || encoding == enc::BAYER_BGGR8 ||
+      encoding == enc::BAYER_GBRG8 || encoding == enc::BAYER_GRBG8)
+  {
+    // Debayer to BGR using OpenCV.
+    // Mapping: ROS name → OpenCV code (matches cv_bridge convention)
+    int code = cv::COLOR_BayerBG2BGR;
+    if (encoding == enc::BAYER_BGGR8)
+      code = cv::COLOR_BayerRG2BGR;
+    else if (encoding == enc::BAYER_GBRG8)
+      code = cv::COLOR_BayerGR2BGR;
+    else if (encoding == enc::BAYER_GRBG8)
+      code = cv::COLOR_BayerGB2BGR;
+    // else BAYER_RGGB8 → COLOR_BayerBG2BGR (already default)
+
+    cv::Mat src(
+        static_cast<int>(h), static_cast<int>(w), CV_8UC1,
+        const_cast<unsigned char*>(image.data.data()), image.step);
+    cv::Mat bgr;
+    cv::cvtColor(src, bgr, code);
+    mrpt::img::CImage out;
+    out.loadFromMemoryBuffer(w, h, true /*color*/, bgr.data, false /*already BGR*/);
+    return out;
+  }
+  else if (encoding == enc::RGBA8)
+  {
+    cv::Mat src(
+        static_cast<int>(h), static_cast<int>(w), CV_8UC4,
+        const_cast<unsigned char*>(image.data.data()), image.step);
+    cv::Mat bgr;
+    cv::cvtColor(src, bgr, cv::COLOR_RGBA2BGR);
+    mrpt::img::CImage out;
+    out.loadFromMemoryBuffer(w, h, true, bgr.data, false);
+    return out;
+  }
+  else if (encoding == enc::BGRA8)
+  {
+    cv::Mat src(
+        static_cast<int>(h), static_cast<int>(w), CV_8UC4,
+        const_cast<unsigned char*>(image.data.data()), image.step);
+    cv::Mat bgr;
+    cv::cvtColor(src, bgr, cv::COLOR_BGRA2BGR);
+    mrpt::img::CImage out;
+    out.loadFromMemoryBuffer(w, h, true, bgr.data, false);
+    return out;
+  }
   else
   {
     THROW_EXCEPTION_FMT(
-        "Unsupported image encoding '%s'. Supported: mono8, rgb8, bgr8.", encoding.c_str());
+        "Unsupported image encoding '%s'. Supported: mono8, mono16, rgb8, bgr8, rgba8, bgra8, "
+        "bayer_rggb8, bayer_bggr8, bayer_gbrg8, bayer_grbg8.",
+        encoding.c_str());
   }
 
   const unsigned int expectedStride = w * channels;
@@ -189,6 +256,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   const std::map<std::string, std::string> mapTopic2Class = {
       {"sensor_msgs/Imu", "CObservationIMU"},
       {"sensor_msgs/Image", "CObservationImage"},
+      {"sensor_msgs/CompressedImage", "CObservationImage"},
       {"sensor_msgs/PointCloud2", "CObservationPointCloud"},
       {"sensor_msgs/LaserScan", "CObservation2DRangeScan"},
       {"sensor_msgs/NavSatFix", "CObservationGPS"},
@@ -244,6 +312,41 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   read_ahead_.clear();
   read_ahead_.resize(bagMessageCount_);
   rosbag_next_idx_ = 0;
+
+  // Pre-scan all /tf_static messages and populate the tf buffer now, before
+  // sequential playback starts. Static transforms are time-independent, so
+  // pre-loading them ensures sensor poses are available even when /tf_static
+  // appears after the first sensor messages in bag recording order.
+  {
+    rosbag::View tfStaticView;
+    for (const auto& bag : bag_reader_->bags)
+      tfStaticView.addQuery(*bag, rosbag::TopicQuery(std::vector<std::string>({"/tf_static"})));
+
+    int nTfStatic = 0;
+    for (const auto& rosmsg : tfStaticView)
+    {
+      const auto tfs = rosmsg.instantiate<tf2_msgs::TFMessage>();
+      if (!tfs) continue;
+      for (const auto& tf : tfs->transforms)
+      {
+        try
+        {
+          tfBuffer_->setTransform(toRos2Transform(tf), "bagfile", true /*isStatic*/);
+          nTfStatic++;
+        }
+        catch (const tf2::TransformException& ex)
+        {
+          MRPT_LOG_ERROR_STREAM("Pre-scan /tf_static: " << ex.what());
+        }
+      }
+    }
+    if (nTfStatic > 0)
+      MRPT_LOG_INFO_STREAM(
+          "Pre-scanned " << nTfStatic << " static transform(s) from /tf_static. "
+                         << "Known frames: " << tfBuffer_->allFramesAsString());
+    else
+      MRPT_LOG_WARN("No /tf_static messages found in the bag. Sensor poses will rely on /tf only.");
+  }
 
   // Begin of code adapted from "Transcriber" class from rosbag2rawlog:
 
@@ -348,9 +451,23 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     }
     else if (sensorType == "CObservationImage")
     {
-      auto callback = [=](const rosbag::MessageInstance& m)
-      { return catchExceptions([=]() { return toImage(sensorLabel, m, fixedSensorPose); }); };
-      lookup_[topic].emplace_back(callback);
+      // Both sensor_msgs/Image and sensor_msgs/CompressedImage map here;
+      // pick the right converter by checking the actual ROS type in the bag.
+      const std::string rosType = topic2type.count(topic) ? topic2type.at(topic) : "";
+      if (rosType == "sensor_msgs/CompressedImage")
+      {
+        auto callback = [=](const rosbag::MessageInstance& m) {
+          return catchExceptions([=]()
+                                 { return toCompressedImage(sensorLabel, m, fixedSensorPose); });
+        };
+        lookup_[topic].emplace_back(callback);
+      }
+      else
+      {
+        auto callback = [=](const rosbag::MessageInstance& m)
+        { return catchExceptions([=]() { return toImage(sensorLabel, m, fixedSensorPose); }); };
+        lookup_[topic].emplace_back(callback);
+      }
     }
     else if (sensorType == "CObservation2DRangeScan")
     {
@@ -630,6 +747,10 @@ void Rosbag1Dataset::doReadAhead(const std::optional<size_t>& requestedIndex, bo
 
     if (skipBufferAhead && idx != endIdx)
     {
+      // Still process tf messages even when fast-forwarding so the transform
+      // buffer stays populated regardless of skip distance:
+      const auto topic = rosmsg.getTopic();
+      if (topic == "/tf" || topic == "/tf_static") to_mrpt(rosmsg);
       continue;
     }
 
@@ -975,6 +1096,50 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
   if (!sensorPoseOK)
   {
     return {};  // tf not yet available: drop this observation (warning already logged)
+  }
+
+  return {imgObs};
+}
+
+Rosbag1Dataset::Obs Rosbag1Dataset::toCompressedImage(
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
+    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
+{
+  const auto image = rosmsg.instantiate<sensor_msgs::CompressedImage>();
+  ASSERT_(image);
+
+  // cv::imdecode handles JPEG, PNG, and most other formats automatically.
+  const cv::Mat compressed(
+      1, static_cast<int>(image->data.size()), CV_8UC1,
+      const_cast<unsigned char*>(image->data.data()));
+  cv::Mat decoded = cv::imdecode(compressed, cv::IMREAD_ANYCOLOR);
+
+  if (decoded.empty())
+  {
+    THROW_EXCEPTION_FMT(
+        "cv::imdecode failed for CompressedImage on topic '%s' (format='%s')",
+        std::string(label).c_str(), image->format.c_str());
+  }
+
+  // imdecode returns BGR; convert to the channel count MRPT expects:
+  const bool isColor = (decoded.channels() == 3);
+  if (decoded.channels() == 4)
+  {
+    cv::cvtColor(decoded, decoded, cv::COLOR_BGRA2BGR);
+  }
+
+  auto imgObs         = mrpt::obs::CObservationImage::Create();
+  imgObs->sensorLabel = label;
+  imgObs->timestamp   = mrpt::ros1bridge::fromROS(image->header.stamp);
+  imgObs->image.loadFromMemoryBuffer(
+      static_cast<unsigned int>(decoded.cols), static_cast<unsigned int>(decoded.rows), isColor,
+      decoded.data, false /*already BGR*/);
+
+  bool sensorPoseOK = findOutSensorPose(
+      imgObs->cameraPose, image->header.frame_id, base_link_frame_id_, fixedSensorPose, label);
+  if (!sensorPoseOK)
+  {
+    return {};
   }
 
   return {imgObs};

@@ -185,6 +185,10 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
       std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
+  Obs toCompressedImage(
+      std::string_view msg, const rosbag::MessageInstance& rosmsg,
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
+
   Obs catchExceptions(const std::function<Obs()>& f);
 
   void autoUnloadOldEntries() const;

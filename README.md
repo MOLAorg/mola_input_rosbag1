@@ -28,7 +28,8 @@ Typical uses:
 | ROS 1 message type        | MOLA / MRPT observation        |
 |---------------------------|--------------------------------|
 | `sensor_msgs/Imu`         | `CObservationIMU`              |
-| `sensor_msgs/Image`       | `CObservationImage` (mono8, rgb8, bgr8) |
+| `sensor_msgs/Image`       | `CObservationImage` (mono8, mono16, rgb8, bgr8, rgba8, bgra8, bayer_rggb8, bayer_bggr8, bayer_gbrg8, bayer_grbg8) |
+| `sensor_msgs/CompressedImage` | `CObservationImage` (JPEG, PNG, and any format supported by OpenCV `imdecode`) |
 | `sensor_msgs/PointCloud2` | `CObservationPointCloud` (XYZ / XYZI / XYZIRT) or `CObservationRotatingScan` |
 | `sensor_msgs/LaserScan`   | `CObservation2DRangeScan`      |
 | `sensor_msgs/NavSatFix`   | `CObservationGPS`              |
