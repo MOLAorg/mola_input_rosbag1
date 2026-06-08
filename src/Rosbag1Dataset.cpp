@@ -418,20 +418,25 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     }
     else
     {
-      ASSERTMSG_(
-          topic2type.count(topic) != 0,
-          mrpt::format(
-              "'sensors' contains topic '%s' which is not found in the rosbag!", topic.c_str()));
-
-      auto itType = mapTopic2Class.find(topic2type.at(topic));
-      if (itType == mapTopic2Class.end())
+      if (topic2type.count(topic) == 0)
       {
-        THROW_EXCEPTION_FMT(
-            "'sensors' contains topic '%s' without a 'type' entry, but could not automatically "
-            "determine its mapping to mrpt::obs classes.",
+        MRPT_LOG_INFO_FMT(
+            "'sensors' contains topic '%s' with no explicit 'type' field, but there are no such "
+            "messages in the rosbag: it will be ignored.",
             topic.c_str());
       }
-      sensorType = itType->second;
+      else
+      {
+        auto itType = mapTopic2Class.find(topic2type.at(topic));
+        if (itType == mapTopic2Class.end())
+        {
+          THROW_EXCEPTION_FMT(
+              "'sensors' contains topic '%s' without a 'type' entry, but could not automatically "
+              "determine its mapping to mrpt::obs classes.",
+              topic.c_str());
+        }
+        sensorType = itType->second;
+      }
     }
 
     // Optional: fixed sensorPose (then ignores/don't need "tf" data):
@@ -469,6 +474,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
         lookup_[topic].emplace_back(callback);
       }
     }
+
     else if (sensorType == "CObservation2DRangeScan")
     {
       auto callback = [=](const rosbag::MessageInstance& m)
@@ -500,7 +506,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       { return catchExceptions([=]() { return toOdometry(sensorLabel, m); }); };
       lookup_[topic].emplace_back(callback);
     }
-    else
+    else if (!sensorType.empty())
     {
       THROW_EXCEPTION_FMT(
           "Unsupported sensor type '%s' for topic '%s'", sensorType.c_str(), topic.c_str());
