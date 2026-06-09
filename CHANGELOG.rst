@@ -3,8 +3,8 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-Forthcoming
------------
+0.1.0 (2026-06-10)
+------------------
 * fix: don't crash for missing topic names
 * feat: support compressed images and more image encoding formats
 * feat: add rosbag1-info CLI app
