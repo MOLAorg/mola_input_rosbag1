@@ -7,7 +7,7 @@
 #
 # Example of usage:
 #   ROSBAG1_FILE=/path/to/dataset.bag \
-#     mola-cli src/mola_input_rosbag1/mola-cli-launchs/ros1bag_to_ros2.yaml
+#     mola-cli src/mola_input_rosbag1/mola-cli-launchs/rosbag1_to_ros2.yaml
 #
 # Then, in another terminal (with ROS 2 sourced):
 #   ros2 topic list
@@ -55,4 +55,5 @@ modules:
   # ========================
   - name: viz
     type: ${MOLA_GUI_MODULE|mola::MolaVizImGui}
+    enabled: ${MOLA_ROSBAG1_WITH_GUI|true} # Set MOLA_ROSBAG1_WITH_GUI to false if this file is used jointly to others with their own GUI modules.
     params: ~ # none

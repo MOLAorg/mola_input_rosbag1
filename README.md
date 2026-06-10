@@ -53,7 +53,7 @@ The pose of each sensor in the robot body frame is looked up from the bag's
   and a throttled warning lists the currently known tf frames, which is handy
   for discovering the correct `base_link_frame_id`.
 - If your bag has no `/tf`, override the pose per sensor with
-  `fixed_sensor_pose` (see the example in `ros1bag_just_view.yaml`).
+  `fixed_sensor_pose` (see the example in `rosbag1_lidar.yaml`).
 
 ## Parameters
 
@@ -66,7 +66,7 @@ The pose of each sensor in the robot body frame is looked up from the bag's
 | `start_paused`       | no  | `false`    | Start playback paused. |
 | `sensors`            | no  | auto       | Explicit list of topics, types, and pose overrides. If omitted, all topics with a known mapping are exposed automatically using the topic name as `sensorLabel`. |
 
-See `mola-cli-launchs/ros1bag_just_view.yaml` for a fully documented `sensors`
+See `mola-cli-launchs/rosbag1_lidar.yaml` for a fully documented `sensors`
 example.
 
 ## Demos
@@ -74,18 +74,18 @@ example.
 Two ready-to-use `mola-cli` launch files are provided under
 `mola-cli-launchs/`.
 
-### 1. Visualize raw streams
+### 1. Visualize raw LiDAR streams
 
 ```bash
 ROSBAG1_FILE=/path/to/dataset.bag \
-  mola-cli src/mola_input_rosbag1/mola-cli-launchs/ros1bag_just_view.yaml
+  mola-cli src/mola_input_rosbag1/mola-cli-launchs/rosbag1_lidar.yaml
 ```
 
 ### 2. ROS 1 -> ROS 2 bridge
 
 ```bash
 ROSBAG1_FILE=/path/to/dataset.bag \
-  mola-cli src/mola_input_rosbag1/mola-cli-launchs/ros1bag_to_ros2.yaml
+  mola-cli src/mola_input_rosbag1/mola-cli-launchs/rosbag1_to_ros2.yaml
 ```
 
 Then, in another terminal with ROS 2 sourced:
@@ -101,7 +101,7 @@ If your bag uses namespaced frames, point the body frame at the right one, e.g.:
 ```bash
 MOLA_BASE_LINK_FRAME=r1/base_link \
 ROSBAG1_FILE=/path/to/dataset.bag \
-  mola-cli src/mola_input_rosbag1/mola-cli-launchs/ros1bag_to_ros2.yaml
+  mola-cli src/mola_input_rosbag1/mola-cli-launchs/rosbag1_to_ros2.yaml
 ```
 
 ## CLI tools

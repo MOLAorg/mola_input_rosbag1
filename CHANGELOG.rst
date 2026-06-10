@@ -3,6 +3,14 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
+Forthcoming
+-----------
+* Update mrpt_ros_bridge submodule
+* fix: build of ros1 headers in gcc15
+* fix: enforce c++17 so build doesn't fail with GCC-15+
+* Add loader for NTU viral dataset
+* Contributors: Jose Luis Blanco-Claraco
+
 0.1.0 (2026-06-10)
 ------------------
 * fix: don't crash for missing topic names

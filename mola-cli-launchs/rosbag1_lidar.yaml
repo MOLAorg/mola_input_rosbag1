@@ -21,6 +21,7 @@ modules:
   # =====================
   - name: viz
     type: ${MOLA_GUI_MODULE|mola::MolaVizImGui}
+    enabled: ${MOLA_ROSBAG1_WITH_GUI|true} # Set MOLA_ROSBAG1_WITH_GUI to false if this file is used jointly to others with their own GUI modules.
     #verbosity_level: DEBUG
     params: ~ # none
 

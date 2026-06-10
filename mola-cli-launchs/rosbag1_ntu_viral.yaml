@@ -5,9 +5,11 @@
 #  - Reads a ROS 1 ".bag" file (no ROS 1 installation required), and
 #  - Shows the MOLA visualizer with the raw sensor streams.
 #
+# Dataset: https://ntu-aris.github.io/ntu_viral_dataset/
+#
 # Example of usage:
 #   ROSBAG1_FILE=/path/to/dataset.bag \
-#     mola-cli src/mola_input_rosbag1/mola-cli-launchs/ros1bag_just_view.yaml
+#     mola-cli src/mola_input_rosbag1/mola-cli-launchs/rosbag1_ntu_viral.yaml
 #
 # Optional environment variables:
 #   ROSBAG1_FILE         (REQUIRED) path to the input .bag file.
@@ -21,6 +23,7 @@ modules:
   # =====================
   - name: viz
     type: ${MOLA_GUI_MODULE|mola::MolaVizImGui}
+    enabled: ${MOLA_ROSBAG1_WITH_GUI|true} # Set MOLA_ROSBAG1_WITH_GUI to false if this file is used jointly to others with their own GUI modules.
     #verbosity_level: DEBUG
     params: ~ # none
 
@@ -79,23 +82,25 @@ modules:
         - topic: "/os1_cloud_node1/points"
           #type: CObservationPointCloud
           # If present, this overrides whatever /tf says about the sensor pose:
-          fixed_sensor_pose: "0 0 0 0 0 0" # 'x y z yaw_deg pitch_deg roll_deg'
+          fixed_sensor_pose: "-0.050 0.000 0.055 0 180 0" # 'x y z yaw_deg pitch_deg roll_deg'
           use_fixed_sensor_pose: true
 
         - topic: "/os1_cloud_node2/points"
           #type: CObservationPointCloud
           # If present, this overrides whatever /tf says about the sensor pose:
-          fixed_sensor_pose: "0 0 0 0 0 0" # 'x y z yaw_deg pitch_deg roll_deg'
+          fixed_sensor_pose: "0.550 0.030 -0.05 0 0 -90" # 'x y z yaw_deg pitch_deg roll_deg'
           use_fixed_sensor_pose: true
 
         - topic: "/right/image_raw"
           #type: CObservationImage
           # If present, this overrides whatever /tf says about the sensor pose:
+          # TODO: put real camera pose!
           fixed_sensor_pose: "0 0 0 0 0 0" # 'x y z yaw_deg pitch_deg roll_deg'
           use_fixed_sensor_pose: true
 
         - topic: "/left/image_raw"
           #type: CObservationImage
           # If present, this overrides whatever /tf says about the sensor pose:
+          # TODO: put real camera pose!
           fixed_sensor_pose: "0 0 0 0 0 0" # 'x y z yaw_deg pitch_deg roll_deg'
           use_fixed_sensor_pose: true
