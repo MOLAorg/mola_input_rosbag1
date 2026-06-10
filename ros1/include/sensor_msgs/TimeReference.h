@@ -5,17 +5,16 @@
 #ifndef SENSOR_MSGS_MESSAGE_TIMEREFERENCE_H
 #define SENSOR_MSGS_MESSAGE_TIMEREFERENCE_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -44,7 +43,10 @@ struct TimeReference_
    typedef ros::Time _time_ref_type;
   _time_ref_type time_ref;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _source_type;
+  typedef std::basic_string<
+      char, std::char_traits<char>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+               _source_type;
   _source_type source;
 
 
@@ -219,7 +221,10 @@ struct Printer< ::sensor_msgs::TimeReference_<ContainerAllocator> >
     s << indent << "time_ref: ";
     Printer<ros::Time>::stream(s, indent + "  ", v.time_ref);
     s << indent << "source: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.source);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.source);
   }
 };
 

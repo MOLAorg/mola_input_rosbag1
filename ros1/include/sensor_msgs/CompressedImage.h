@@ -5,17 +5,16 @@
 #ifndef SENSOR_MSGS_MESSAGE_COMPRESSEDIMAGE_H
 #define SENSOR_MSGS_MESSAGE_COMPRESSEDIMAGE_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -41,10 +40,15 @@ struct CompressedImage_
    typedef  ::std_msgs::Header_<ContainerAllocator>  _header_type;
   _header_type header;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _format_type;
+  typedef std::basic_string<
+      char, std::char_traits<char>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+               _format_type;
   _format_type format;
 
-   typedef std::vector<uint8_t, typename ContainerAllocator::template rebind<uint8_t>::other >  _data_type;
+  typedef std::vector<
+      uint8_t, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<uint8_t>>
+             _data_type;
   _data_type data;
 
 
@@ -223,7 +227,10 @@ struct Printer< ::sensor_msgs::CompressedImage_<ContainerAllocator> >
     s << std::endl;
     Printer< ::std_msgs::Header_<ContainerAllocator> >::stream(s, indent + "  ", v.header);
     s << indent << "format: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.format);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.format);
     s << indent << "data[]" << std::endl;
     for (size_t i = 0; i < v.data.size(); ++i)
     {

@@ -5,16 +5,15 @@
 #ifndef SENSOR_MSGS_MESSAGE_POINTFIELD_H
 #define SENSOR_MSGS_MESSAGE_POINTFIELD_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -37,36 +36,35 @@ struct PointField_
   (void)_alloc;
     }
 
+    typedef std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+               _name_type;
+    _name_type name;
 
+    typedef uint32_t _offset_type;
+    _offset_type     offset;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _name_type;
-  _name_type name;
+    typedef uint8_t _datatype_type;
+    _datatype_type  datatype;
 
-   typedef uint32_t _offset_type;
-  _offset_type offset;
+    typedef uint32_t _count_type;
+    _count_type      count;
 
-   typedef uint8_t _datatype_type;
-  _datatype_type datatype;
+    enum
+    {
+      INT8    = 1u,
+      UINT8   = 2u,
+      INT16   = 3u,
+      UINT16  = 4u,
+      INT32   = 5u,
+      UINT32  = 6u,
+      FLOAT32 = 7u,
+      FLOAT64 = 8u,
+    };
 
-   typedef uint32_t _count_type;
-  _count_type count;
-
-
-
-  enum {
-    INT8 = 1u,
-    UINT8 = 2u,
-    INT16 = 3u,
-    UINT16 = 4u,
-    INT32 = 5u,
-    UINT32 = 6u,
-    FLOAT32 = 7u,
-    FLOAT64 = 8u,
-  };
-
-
-  typedef boost::shared_ptr< ::sensor_msgs::PointField_<ContainerAllocator> > Ptr;
-  typedef boost::shared_ptr< ::sensor_msgs::PointField_<ContainerAllocator> const> ConstPtr;
+    typedef boost::shared_ptr<::sensor_msgs::PointField_<ContainerAllocator>>       Ptr;
+    typedef boost::shared_ptr<::sensor_msgs::PointField_<ContainerAllocator> const> ConstPtr;
 
 }; // struct PointField_
 
@@ -235,7 +233,10 @@ struct Printer< ::sensor_msgs::PointField_<ContainerAllocator> >
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::sensor_msgs::PointField_<ContainerAllocator>& v)
   {
     s << indent << "name: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.name);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.name);
     s << indent << "offset: ";
     Printer<uint32_t>::stream(s, indent + "  ", v.offset);
     s << indent << "datatype: ";

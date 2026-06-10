@@ -5,18 +5,17 @@
 #ifndef SENSOR_MSGS_MESSAGE_POINTCLOUD2_H
 #define SENSOR_MSGS_MESSAGE_POINTCLOUD2_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
-#include <std_msgs/Header.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <sensor_msgs/PointField.h>
+#include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -60,7 +59,11 @@ struct PointCloud2_
    typedef uint32_t _width_type;
   _width_type width;
 
-   typedef std::vector< ::sensor_msgs::PointField_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::sensor_msgs::PointField_<ContainerAllocator> >::other >  _fields_type;
+  typedef std::vector<
+      ::sensor_msgs::PointField_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::sensor_msgs::PointField_<ContainerAllocator>>>
+               _fields_type;
   _fields_type fields;
 
    typedef uint8_t _is_bigendian_type;
@@ -72,7 +75,9 @@ struct PointCloud2_
    typedef uint32_t _row_step_type;
   _row_step_type row_step;
 
-   typedef std::vector<uint8_t, typename ContainerAllocator::template rebind<uint8_t>::other >  _data_type;
+  typedef std::vector<
+      uint8_t, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<uint8_t>>
+             _data_type;
   _data_type data;
 
    typedef uint8_t _is_dense_type;

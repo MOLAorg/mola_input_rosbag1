@@ -5,17 +5,16 @@
 #ifndef TF2_MSGS_MESSAGE_TFMESSAGE_H
 #define TF2_MSGS_MESSAGE_TFMESSAGE_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
+#include <geometry_msgs/TransformStamped.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 
-#include <geometry_msgs/TransformStamped.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace tf2_msgs
 {
@@ -32,9 +31,11 @@ struct TFMessage_
   (void)_alloc;
     }
 
-
-
-   typedef std::vector< ::geometry_msgs::TransformStamped_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::geometry_msgs::TransformStamped_<ContainerAllocator> >::other >  _transforms_type;
+  typedef std::vector<
+      ::geometry_msgs::TransformStamped_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::geometry_msgs::TransformStamped_<ContainerAllocator>>>
+                   _transforms_type;
   _transforms_type transforms;
 
 

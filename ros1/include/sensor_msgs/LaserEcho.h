@@ -5,16 +5,15 @@
 #ifndef SENSOR_MSGS_MESSAGE_LASERECHO_H
 #define SENSOR_MSGS_MESSAGE_LASERECHO_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -31,9 +30,9 @@ struct LaserEcho_
   (void)_alloc;
     }
 
-
-
-   typedef std::vector<float, typename ContainerAllocator::template rebind<float>::other >  _echoes_type;
+  typedef std::vector<
+      float, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<float>>
+               _echoes_type;
   _echoes_type echoes;
 
 

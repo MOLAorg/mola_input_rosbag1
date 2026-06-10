@@ -5,17 +5,16 @@
 #ifndef GEOMETRY_MSGS_MESSAGE_POLYGON_H
 #define GEOMETRY_MSGS_MESSAGE_POLYGON_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
+#include <geometry_msgs/Point32.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 
-#include <geometry_msgs/Point32.h>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace geometry_msgs
 {
@@ -32,9 +31,11 @@ struct Polygon_
   (void)_alloc;
     }
 
-
-
-   typedef std::vector< ::geometry_msgs::Point32_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::geometry_msgs::Point32_<ContainerAllocator> >::other >  _points_type;
+  typedef std::vector<
+      ::geometry_msgs::Point32_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::geometry_msgs::Point32_<ContainerAllocator>>>
+               _points_type;
   _points_type points;
 
 

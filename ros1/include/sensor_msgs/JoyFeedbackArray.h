@@ -5,17 +5,16 @@
 #ifndef SENSOR_MSGS_MESSAGE_JOYFEEDBACKARRAY_H
 #define SENSOR_MSGS_MESSAGE_JOYFEEDBACKARRAY_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <sensor_msgs/JoyFeedback.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -32,9 +31,11 @@ struct JoyFeedbackArray_
   (void)_alloc;
     }
 
-
-
-   typedef std::vector< ::sensor_msgs::JoyFeedback_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::sensor_msgs::JoyFeedback_<ContainerAllocator> >::other >  _array_type;
+  typedef std::vector<
+      ::sensor_msgs::JoyFeedback_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::sensor_msgs::JoyFeedback_<ContainerAllocator>>>
+              _array_type;
   _array_type array;
 
 

@@ -28,28 +28,26 @@
 #ifndef ROSCPP_SERIALIZATION_H
 #define ROSCPP_SERIALIZATION_H
 
-#include "roscpp_serialization_macros.h"
-
-#include <ros/types.h>
 #include <ros/time.h>
-
-#include "serialized_message.h"
-#include "ros/message_traits.h"
-#include "ros/builtin_message_traits.h"
-#include "ros/exception.h"
-#include "ros/datatypes.h"
-
-#include <vector>
-#include <map>
+#include <ros/types.h>
 
 #include <boost/array.hpp>
 #include <boost/call_traits.hpp>
-#include <boost/utility/enable_if.hpp>
 #include <boost/mpl/and.hpp>
-#include <boost/mpl/or.hpp>
 #include <boost/mpl/not.hpp>
-
+#include <boost/mpl/or.hpp>
+#include <boost/utility/enable_if.hpp>
 #include <cstring>
+#include <map>
+#include <memory>
+#include <vector>
+
+#include "ros/builtin_message_traits.h"
+#include "ros/datatypes.h"
+#include "ros/exception.h"
+#include "ros/message_traits.h"
+#include "roscpp_serialization_macros.h"
+#include "serialized_message.h"
 
 #define ROS_NEW_SERIALIZATION_API 1
 
@@ -332,7 +330,9 @@ struct VectorSerializer
 template<typename T, class ContainerAllocator>
 struct VectorSerializer<T, ContainerAllocator, typename boost::disable_if<mt::IsFixedSize<T> >::type >
 {
-  typedef std::vector<T, typename ContainerAllocator::template rebind<T>::other> VecType;
+  typedef std::vector<
+      T, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<T>>
+                                           VecType;
   typedef typename VecType::iterator IteratorType;
   typedef typename VecType::const_iterator ConstIteratorType;
 
@@ -382,7 +382,9 @@ struct VectorSerializer<T, ContainerAllocator, typename boost::disable_if<mt::Is
 template<typename T, class ContainerAllocator>
 struct VectorSerializer<T, ContainerAllocator, typename boost::enable_if<mt::IsSimple<T> >::type >
 {
-  typedef std::vector<T, typename ContainerAllocator::template rebind<T>::other> VecType;
+  typedef std::vector<
+      T, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<T>>
+                                           VecType;
   typedef typename VecType::iterator IteratorType;
   typedef typename VecType::const_iterator ConstIteratorType;
 
@@ -424,7 +426,9 @@ struct VectorSerializer<T, ContainerAllocator, typename boost::enable_if<mt::IsS
 template<typename T, class ContainerAllocator>
 struct VectorSerializer<T, ContainerAllocator, typename boost::enable_if<mpl::and_<mt::IsFixedSize<T>, mpl::not_<mt::IsSimple<T> > > >::type >
 {
-  typedef std::vector<T, typename ContainerAllocator::template rebind<T>::other> VecType;
+  typedef std::vector<
+      T, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<T>>
+                                           VecType;
   typedef typename VecType::iterator IteratorType;
   typedef typename VecType::const_iterator ConstIteratorType;
 

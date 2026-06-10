@@ -5,17 +5,16 @@
 #ifndef STD_MSGS_MESSAGE_MULTIARRAYLAYOUT_H
 #define STD_MSGS_MESSAGE_MULTIARRAYLAYOUT_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/MultiArrayDimension.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace std_msgs
 {
@@ -34,20 +33,18 @@ struct MultiArrayLayout_
   (void)_alloc;
     }
 
+    typedef std::vector<
+        ::std_msgs::MultiArrayDimension_<ContainerAllocator>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+            ::std_msgs::MultiArrayDimension_<ContainerAllocator>>>
+              _dim_type;
+    _dim_type dim;
 
+    typedef uint32_t  _data_offset_type;
+    _data_offset_type data_offset;
 
-   typedef std::vector< ::std_msgs::MultiArrayDimension_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::std_msgs::MultiArrayDimension_<ContainerAllocator> >::other >  _dim_type;
-  _dim_type dim;
-
-   typedef uint32_t _data_offset_type;
-  _data_offset_type data_offset;
-
-
-
-
-
-  typedef boost::shared_ptr< ::std_msgs::MultiArrayLayout_<ContainerAllocator> > Ptr;
-  typedef boost::shared_ptr< ::std_msgs::MultiArrayLayout_<ContainerAllocator> const> ConstPtr;
+    typedef boost::shared_ptr<::std_msgs::MultiArrayLayout_<ContainerAllocator>>       Ptr;
+    typedef boost::shared_ptr<::std_msgs::MultiArrayLayout_<ContainerAllocator> const> ConstPtr;
 
 }; // struct MultiArrayLayout_
 

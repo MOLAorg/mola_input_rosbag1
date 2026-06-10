@@ -5,16 +5,15 @@
 #ifndef STD_MSGS_MESSAGE_HEADER_H
 #define STD_MSGS_MESSAGE_HEADER_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace std_msgs
 {
@@ -43,7 +42,10 @@ struct Header_
    typedef ros::Time _stamp_type;
   _stamp_type stamp;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _frame_id_type;
+  typedef std::basic_string<
+      char, std::char_traits<char>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+                 _frame_id_type;
   _frame_id_type frame_id;
 
 
@@ -207,7 +209,10 @@ struct Printer< ::std_msgs::Header_<ContainerAllocator> >
     s << indent << "stamp: ";
     Printer<ros::Time>::stream(s, indent + "  ", v.stamp);
     s << indent << "frame_id: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.frame_id);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.frame_id);
   }
 };
 

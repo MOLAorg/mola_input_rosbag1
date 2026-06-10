@@ -5,17 +5,16 @@
 #ifndef STD_MSGS_MESSAGE_INT8MULTIARRAY_H
 #define STD_MSGS_MESSAGE_INT8MULTIARRAY_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/MultiArrayLayout.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace std_msgs
 {
@@ -39,7 +38,9 @@ struct Int8MultiArray_
    typedef  ::std_msgs::MultiArrayLayout_<ContainerAllocator>  _layout_type;
   _layout_type layout;
 
-   typedef std::vector<int8_t, typename ContainerAllocator::template rebind<int8_t>::other >  _data_type;
+  typedef std::vector<
+      int8_t, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<int8_t>>
+             _data_type;
   _data_type data;
 
 

@@ -5,16 +5,15 @@
 #ifndef STD_MSGS_MESSAGE_MULTIARRAYDIMENSION_H
 #define STD_MSGS_MESSAGE_MULTIARRAYDIMENSION_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace std_msgs
 {
@@ -35,23 +34,20 @@ struct MultiArrayDimension_
   (void)_alloc;
     }
 
+    typedef std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+                _label_type;
+    _label_type label;
 
+    typedef uint32_t _size_type;
+    _size_type       size;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _label_type;
-  _label_type label;
+    typedef uint32_t _stride_type;
+    _stride_type     stride;
 
-   typedef uint32_t _size_type;
-  _size_type size;
-
-   typedef uint32_t _stride_type;
-  _stride_type stride;
-
-
-
-
-
-  typedef boost::shared_ptr< ::std_msgs::MultiArrayDimension_<ContainerAllocator> > Ptr;
-  typedef boost::shared_ptr< ::std_msgs::MultiArrayDimension_<ContainerAllocator> const> ConstPtr;
+    typedef boost::shared_ptr<::std_msgs::MultiArrayDimension_<ContainerAllocator>>       Ptr;
+    typedef boost::shared_ptr<::std_msgs::MultiArrayDimension_<ContainerAllocator> const> ConstPtr;
 
 }; // struct MultiArrayDimension_
 
@@ -191,7 +187,10 @@ struct Printer< ::std_msgs::MultiArrayDimension_<ContainerAllocator> >
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::std_msgs::MultiArrayDimension_<ContainerAllocator>& v)
   {
     s << indent << "label: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.label);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.label);
     s << indent << "size: ";
     Printer<uint32_t>::stream(s, indent + "  ", v.size);
     s << indent << "stride: ";

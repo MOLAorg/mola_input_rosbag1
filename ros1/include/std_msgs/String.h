@@ -5,16 +5,15 @@
 #ifndef STD_MSGS_MESSAGE_STRING_H
 #define STD_MSGS_MESSAGE_STRING_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace std_msgs
 {
@@ -31,9 +30,10 @@ struct String_
   (void)_alloc;
     }
 
-
-
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _data_type;
+  typedef std::basic_string<
+      char, std::char_traits<char>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+             _data_type;
   _data_type data;
 
 
@@ -177,7 +177,10 @@ struct Printer< ::std_msgs::String_<ContainerAllocator> >
   template<typename Stream> static void stream(Stream& s, const std::string& indent, const ::std_msgs::String_<ContainerAllocator>& v)
   {
     s << indent << "data: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.data);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.data);
   }
 };
 

@@ -5,18 +5,17 @@
 #ifndef SENSOR_MSGS_MESSAGE_CAMERAINFO_H
 #define SENSOR_MSGS_MESSAGE_CAMERAINFO_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
-#include <std_msgs/Header.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <sensor_msgs/RegionOfInterest.h>
+#include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -74,10 +73,15 @@ struct CameraInfo_
    typedef uint32_t _width_type;
   _width_type width;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _distortion_model_type;
+  typedef std::basic_string<
+      char, std::char_traits<char>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+                         _distortion_model_type;
   _distortion_model_type distortion_model;
 
-   typedef std::vector<double, typename ContainerAllocator::template rebind<double>::other >  _D_type;
+  typedef std::vector<
+      double, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<double>>
+          _D_type;
   _D_type D;
 
    typedef boost::array<double, 9>  _K_type;
@@ -426,7 +430,10 @@ struct Printer< ::sensor_msgs::CameraInfo_<ContainerAllocator> >
     s << indent << "width: ";
     Printer<uint32_t>::stream(s, indent + "  ", v.width);
     s << indent << "distortion_model: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.distortion_model);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.distortion_model);
     s << indent << "D[]" << std::endl;
     for (size_t i = 0; i < v.D.size(); ++i)
     {

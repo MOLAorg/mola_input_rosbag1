@@ -5,17 +5,16 @@
 #ifndef SENSOR_MSGS_MESSAGE_JOY_H
 #define SENSOR_MSGS_MESSAGE_JOY_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -41,10 +40,14 @@ struct Joy_
    typedef  ::std_msgs::Header_<ContainerAllocator>  _header_type;
   _header_type header;
 
-   typedef std::vector<float, typename ContainerAllocator::template rebind<float>::other >  _axes_type;
+  typedef std::vector<
+      float, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<float>>
+             _axes_type;
   _axes_type axes;
 
-   typedef std::vector<int32_t, typename ContainerAllocator::template rebind<int32_t>::other >  _buttons_type;
+  typedef std::vector<
+      int32_t, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<int32_t>>
+                _buttons_type;
   _buttons_type buttons;
 
 

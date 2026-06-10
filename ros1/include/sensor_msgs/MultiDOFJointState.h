@@ -5,20 +5,19 @@
 #ifndef SENSOR_MSGS_MESSAGE_MULTIDOFJOINTSTATE_H
 #define SENSOR_MSGS_MESSAGE_MULTIDOFJOINTSTATE_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
-#include <ros/builtin_message_traits.h>
-#include <ros/message_operations.h>
-
-#include <std_msgs/Header.h>
 #include <geometry_msgs/Transform.h>
 #include <geometry_msgs/Twist.h>
 #include <geometry_msgs/Wrench.h>
+#include <ros/builtin_message_traits.h>
+#include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
+#include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -48,16 +47,35 @@ struct MultiDOFJointState_
    typedef  ::std_msgs::Header_<ContainerAllocator>  _header_type;
   _header_type header;
 
-   typedef std::vector<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > , typename ContainerAllocator::template rebind<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::other >  _joint_names_type;
+  typedef std::vector<
+      std::basic_string<
+          char, std::char_traits<char>,
+          typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<std::basic_string<
+          char, std::char_traits<char>,
+          typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>>
+                    _joint_names_type;
   _joint_names_type joint_names;
 
-   typedef std::vector< ::geometry_msgs::Transform_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::geometry_msgs::Transform_<ContainerAllocator> >::other >  _transforms_type;
+  typedef std::vector<
+      ::geometry_msgs::Transform_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::geometry_msgs::Transform_<ContainerAllocator>>>
+                   _transforms_type;
   _transforms_type transforms;
 
-   typedef std::vector< ::geometry_msgs::Twist_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::geometry_msgs::Twist_<ContainerAllocator> >::other >  _twist_type;
+  typedef std::vector<
+      ::geometry_msgs::Twist_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::geometry_msgs::Twist_<ContainerAllocator>>>
+              _twist_type;
   _twist_type twist;
 
-   typedef std::vector< ::geometry_msgs::Wrench_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::geometry_msgs::Wrench_<ContainerAllocator> >::other >  _wrench_type;
+  typedef std::vector<
+      ::geometry_msgs::Wrench_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::geometry_msgs::Wrench_<ContainerAllocator>>>
+               _wrench_type;
   _wrench_type wrench;
 
 
@@ -295,7 +313,10 @@ struct Printer< ::sensor_msgs::MultiDOFJointState_<ContainerAllocator> >
     for (size_t i = 0; i < v.joint_names.size(); ++i)
     {
       s << indent << "  joint_names[" << i << "]: ";
-      Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.joint_names[i]);
+      Printer<std::basic_string<
+          char, std::char_traits<char>,
+          typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+          stream(s, indent + "  ", v.joint_names[i]);
     }
     s << indent << "transforms[]" << std::endl;
     for (size_t i = 0; i < v.transforms.size(); ++i)

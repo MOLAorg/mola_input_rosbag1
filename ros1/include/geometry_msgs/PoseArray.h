@@ -5,18 +5,17 @@
 #ifndef GEOMETRY_MSGS_MESSAGE_POSEARRAY_H
 #define GEOMETRY_MSGS_MESSAGE_POSEARRAY_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
+#include <geometry_msgs/Pose.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/Header.h>
-#include <geometry_msgs/Pose.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace geometry_msgs
 {
@@ -40,7 +39,11 @@ struct PoseArray_
    typedef  ::std_msgs::Header_<ContainerAllocator>  _header_type;
   _header_type header;
 
-   typedef std::vector< ::geometry_msgs::Pose_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::geometry_msgs::Pose_<ContainerAllocator> >::other >  _poses_type;
+  typedef std::vector<
+      ::geometry_msgs::Pose_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::geometry_msgs::Pose_<ContainerAllocator>>>
+              _poses_type;
   _poses_type poses;
 
 

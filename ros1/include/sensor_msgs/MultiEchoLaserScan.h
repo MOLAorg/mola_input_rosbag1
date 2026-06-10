@@ -5,19 +5,17 @@
 #ifndef SENSOR_MSGS_MESSAGE_MULTIECHOLASERSCAN_H
 #define SENSOR_MSGS_MESSAGE_MULTIECHOLASERSCAN_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
+#include <sensor_msgs/LaserEcho.h>
 #include <std_msgs/Header.h>
-#include <sensor_msgs/LaserEcho.h>
-#include <sensor_msgs/LaserEcho.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -78,10 +76,18 @@ struct MultiEchoLaserScan_
    typedef float _range_max_type;
   _range_max_type range_max;
 
-   typedef std::vector< ::sensor_msgs::LaserEcho_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::sensor_msgs::LaserEcho_<ContainerAllocator> >::other >  _ranges_type;
+  typedef std::vector<
+      ::sensor_msgs::LaserEcho_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::sensor_msgs::LaserEcho_<ContainerAllocator>>>
+               _ranges_type;
   _ranges_type ranges;
 
-   typedef std::vector< ::sensor_msgs::LaserEcho_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::sensor_msgs::LaserEcho_<ContainerAllocator> >::other >  _intensities_type;
+  typedef std::vector<
+      ::sensor_msgs::LaserEcho_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::sensor_msgs::LaserEcho_<ContainerAllocator>>>
+                    _intensities_type;
   _intensities_type intensities;
 
 

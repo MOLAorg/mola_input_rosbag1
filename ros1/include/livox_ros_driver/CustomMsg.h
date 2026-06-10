@@ -5,18 +5,17 @@
 #ifndef LIVOX_ROS_DRIVER_MESSAGE_CUSTOMMSG_H
 #define LIVOX_ROS_DRIVER_MESSAGE_CUSTOMMSG_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
+#include <livox_ros_driver/CustomPoint.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/Header.h>
-#include <livox_ros_driver/CustomPoint.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace livox_ros_driver
 {
@@ -62,7 +61,11 @@ struct CustomMsg_
    typedef boost::array<uint8_t, 3>  _rsvd_type;
   _rsvd_type rsvd;
 
-   typedef std::vector< ::livox_ros_driver::CustomPoint_<ContainerAllocator> , typename ContainerAllocator::template rebind< ::livox_ros_driver::CustomPoint_<ContainerAllocator> >::other >  _points_type;
+  typedef std::vector<
+      ::livox_ros_driver::CustomPoint_<ContainerAllocator>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<
+          ::livox_ros_driver::CustomPoint_<ContainerAllocator>>>
+               _points_type;
   _points_type points;
 
 

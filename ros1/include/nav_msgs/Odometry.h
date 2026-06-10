@@ -5,19 +5,18 @@
 #ifndef NAV_MSGS_MESSAGE_ODOMETRY_H
 #define NAV_MSGS_MESSAGE_ODOMETRY_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
-#include <ros/builtin_message_traits.h>
-#include <ros/message_operations.h>
-
-#include <std_msgs/Header.h>
 #include <geometry_msgs/PoseWithCovariance.h>
 #include <geometry_msgs/TwistWithCovariance.h>
+#include <ros/builtin_message_traits.h>
+#include <ros/message_operations.h>
+#include <ros/serialization.h>
+#include <ros/types.h>
+#include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace nav_msgs
 {
@@ -45,7 +44,10 @@ struct Odometry_
    typedef  ::std_msgs::Header_<ContainerAllocator>  _header_type;
   _header_type header;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _child_frame_id_type;
+  typedef std::basic_string<
+      char, std::char_traits<char>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+                       _child_frame_id_type;
   _child_frame_id_type child_frame_id;
 
    typedef  ::geometry_msgs::PoseWithCovariance_<ContainerAllocator>  _pose_type;
@@ -198,7 +200,10 @@ struct Printer< ::nav_msgs::Odometry_<ContainerAllocator> >
     s << std::endl;
     Printer< ::std_msgs::Header_<ContainerAllocator> >::stream(s, indent + "  ", v.header);
     s << indent << "child_frame_id: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.child_frame_id);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.child_frame_id);
     s << indent << "pose: ";
     s << std::endl;
     Printer< ::geometry_msgs::PoseWithCovariance_<ContainerAllocator> >::stream(s, indent + "  ", v.pose);

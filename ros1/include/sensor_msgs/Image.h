@@ -5,17 +5,16 @@
 #ifndef SENSOR_MSGS_MESSAGE_IMAGE_H
 #define SENSOR_MSGS_MESSAGE_IMAGE_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -55,7 +54,10 @@ struct Image_
    typedef uint32_t _width_type;
   _width_type width;
 
-   typedef std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other >  _encoding_type;
+  typedef std::basic_string<
+      char, std::char_traits<char>,
+      typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>
+                 _encoding_type;
   _encoding_type encoding;
 
    typedef uint8_t _is_bigendian_type;
@@ -64,7 +66,9 @@ struct Image_
    typedef uint32_t _step_type;
   _step_type step;
 
-   typedef std::vector<uint8_t, typename ContainerAllocator::template rebind<uint8_t>::other >  _data_type;
+  typedef std::vector<
+      uint8_t, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<uint8_t>>
+             _data_type;
   _data_type data;
 
 
@@ -265,7 +269,10 @@ struct Printer< ::sensor_msgs::Image_<ContainerAllocator> >
     s << indent << "width: ";
     Printer<uint32_t>::stream(s, indent + "  ", v.width);
     s << indent << "encoding: ";
-    Printer<std::basic_string<char, std::char_traits<char>, typename ContainerAllocator::template rebind<char>::other > >::stream(s, indent + "  ", v.encoding);
+    Printer<std::basic_string<
+        char, std::char_traits<char>,
+        typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<char>>>::
+        stream(s, indent + "  ", v.encoding);
     s << indent << "is_bigendian: ";
     Printer<uint8_t>::stream(s, indent + "  ", v.is_bigendian);
     s << indent << "step: ";

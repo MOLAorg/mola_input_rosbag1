@@ -5,17 +5,16 @@
 #ifndef SENSOR_MSGS_MESSAGE_LASERSCAN_H
 #define SENSOR_MSGS_MESSAGE_LASERSCAN_H
 
-
-#include <string>
-#include <vector>
-#include <map>
-
-#include <ros/types.h>
-#include <ros/serialization.h>
 #include <ros/builtin_message_traits.h>
 #include <ros/message_operations.h>
-
+#include <ros/serialization.h>
+#include <ros/types.h>
 #include <std_msgs/Header.h>
+
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace sensor_msgs
 {
@@ -76,10 +75,14 @@ struct LaserScan_
    typedef float _range_max_type;
   _range_max_type range_max;
 
-   typedef std::vector<float, typename ContainerAllocator::template rebind<float>::other >  _ranges_type;
+  typedef std::vector<
+      float, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<float>>
+               _ranges_type;
   _ranges_type ranges;
 
-   typedef std::vector<float, typename ContainerAllocator::template rebind<float>::other >  _intensities_type;
+  typedef std::vector<
+      float, typename std::allocator_traits<ContainerAllocator>::template rebind_alloc<float>>
+                    _intensities_type;
   _intensities_type intensities;
 
 
