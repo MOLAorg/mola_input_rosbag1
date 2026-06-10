@@ -12,6 +12,14 @@ cmake_minimum_required(VERSION 3.5)
 # Tell CMake we'll use C++ for use in its tests/flags
 project(mola_input_rosbag1 LANGUAGES C CXX)
 
+# The vendored ROS 1 message headers (ros1/, mrpt_ros_bridge/) rely on
+# std::allocator<>::rebind, which was deprecated in C++17 and is no longer
+# available by default with newer compilers (e.g. GCC 15 on Rolling) that
+# default to C++20/23. Force C++17 for this whole package so the vendored
+# headers keep building everywhere.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # MOLA CMake scripts: "mola_xxx()"
 find_package(mola_common REQUIRED)
 # find dependencies:
