@@ -3,8 +3,8 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-Forthcoming
------------
+0.2.0 (2026-06-10)
+------------------
 * Update mrpt_ros_bridge submodule
 * fix: build of ros1 headers in gcc15
 * fix: enforce c++17 so build doesn't fail with GCC-15+

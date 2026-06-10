@@ -5,7 +5,7 @@
 -->
 <package format="3">
   <name>mola_input_rosbag1</name>
-  <version>0.1.0</version>
+  <version>0.2.0</version>
   <description>MOLA DataSource from ROS1 bag files that does not need a ROS1 installation</description>
 
   <maintainer email="joseluisblancoc@gmail.com">Jose-Luis Blanco-Claraco</maintainer>
