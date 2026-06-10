@@ -1,0 +1,26 @@
+# -----------------------------------------------------------------------------
+#                        SLAM system definition for MOLA
+#
+# This file publishes MOLA/MRPT sensor streams coming from other modules (in a
+# multi-yaml file mola-cli configuration) via a ROS 2 bridge.
+# It can be used together with a yaml file that reads a ROS 1 ".bag" file
+# (no ROS 1 installation required) to re-publishes its sensor streams as
+# ROS 2 topics, with /tf, in real time.
+# -----------------------------------------------------------------------------
+
+modules:
+  # MOLA -> ROS 2 bridge  =====================
+  - type: mola::BridgeROS2
+    name: ros2_bridge
+    execution_rate: 50 # Hz
+    #verbosity_level: INFO
+    params:
+      # The raw observations coming from the dataset are automatically
+      # forwarded and published as ROS 2 topics by this bridge.
+      #
+      # The robot body frame and the (map) reference frame used for /tf:
+      base_link_frame: base_link
+      reference_frame: map
+
+      # No SLAM module here, so do not expect SLAM poses:
+      publish_odometry_msgs_from_slam: false

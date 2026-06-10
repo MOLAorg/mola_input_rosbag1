@@ -83,9 +83,13 @@ ROSBAG1_FILE=/path/to/dataset.bag \
 
 ### 2. ROS 1 -> ROS 2 bridge
 
+Example for the NTU Viral dataset:
+
 ```bash
-ROSBAG1_FILE=/path/to/dataset.bag \
-  mola-cli src/mola_input_rosbag1/mola-cli-launchs/rosbag1_to_ros2.yaml
+ROSBAG1_FILE=/mnt/storage/ntu-viral/eee_01/eee_01.bag \
+mola-cli \
+  src/mola_input_rosbag1/mola-cli-launchs/rosbag1_ntu_viral.yaml \
+  src/mola_input_rosbag1/mola-cli-launchs/publish_to_ros2.yam
 ```
 
 Then, in another terminal with ROS 2 sourced:
