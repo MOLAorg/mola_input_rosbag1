@@ -68,6 +68,10 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
 
   mrpt::obs::CSensoryFrame::Ptr datasetGetObservations(size_t timestep) const override;
 
+  // See docs in base class (mola::OfflineDatasetSource):
+  bool         hasGroundTruthTrajectory() const override { return !groundTruthTrajectory_.empty(); }
+  trajectory_t getGroundTruthTrajectory() const override { return groundTruthTrajectory_; }
+
   // Virtual interface of Dataset_UI (see docs in derived class)
   size_t datasetUI_size() const override { return datasetSize(); }
   size_t datasetUI_lastQueriedTimestep() const override
@@ -107,8 +111,17 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
 
  private:
   bool        initialized_ = false;
-  std::string rosbag_filename_;
-  std::string base_link_frame_id_ = "base_link";
+  std::string rosbag_filename_;  //!< First (or only) input bag file, kept for log messages.
+  std::vector<std::string> rosbag_filenames_;  //!< All input bag file(s), opened jointly.
+  std::string              base_link_frame_id_ = "base_link";
+
+  /// Optional topic (e.g. "/gt_poses") pre-scanned at init time to build
+  /// groundTruthTrajectory_, in addition to its normal per-step publishing
+  /// as a CObservationRobotPose/CObservationOdometry (if also listed under "sensors").
+  std::string ground_truth_topic_;
+
+  /// See mola::OfflineDatasetSource::getGroundTruthTrajectory()
+  trajectory_t groundTruthTrajectory_;
 
   std::optional<mrpt::Clock::time_point> rosbag_begin_time_;
   size_t                                 read_ahead_length_ = 15;
@@ -160,6 +173,14 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
   Obs toTf(const rosbag::MessageInstance& rosmsg);
 
   Obs toPointCloud2(
+      std::string_view label, const rosbag::MessageInstance& rosmsg,
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
+
+  /// Converts a Livox `livox_ros_driver/CustomMsg` (used e.g. by the Livox
+  /// AVIA, as in the BotanicGarden dataset) into a CObservationPointCloud
+  /// holding a CPointsMapXYZIRT-like cloud (intensity=reflectivity,
+  /// ring=line, time=offset_time).
+  Obs toLivoxCustomMsg(
       std::string_view label, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
