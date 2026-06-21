@@ -22,6 +22,7 @@
 #include <mrpt/containers/yaml.h>
 #include <mrpt/core/initializer.h>
 #include <mrpt/img/CImage.h>
+#include <mrpt/maps/CGenericPointsMap.h>
 #include <mrpt/obs/CObservation2DRangeScan.h>
 #include <mrpt/obs/CObservation3DRangeScan.h>
 #include <mrpt/obs/CObservationGPS.h>
@@ -1085,21 +1086,26 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toLivoxCustomMsg(
     return {};  // tf not yet available: drop this observation (warning already logged)
   }
 
-  auto mrptPts       = mrpt::maps::CPointsMapXYZIRT::Create();
+  auto mrptPts       = mrpt::maps::CGenericPointsMap::Create();
   ptsObs->pointcloud = mrptPts;
 
+  mrptPts->registerField_float(mrpt::maps::CPointsMap::POINT_FIELD_INTENSITY);
+  mrptPts->registerField_uint16(mrpt::maps::CPointsMap::POINT_FIELD_RING_ID);
+  mrptPts->registerField_float(mrpt::maps::CPointsMap::POINT_FIELD_TIMESTAMP);
+
   const size_t numPoints = msg->points.size();
-  mrptPts->resize_XYZIRT(numPoints, true /*intensity*/, true /*ring*/, true /*time*/);
+  mrptPts->resize(numPoints);
 
   for (size_t i = 0; i < numPoints; i++)
   {
     const auto& pt = msg->points[i];
 
     mrptPts->setPointFast(i, pt.x, pt.y, pt.z);
-    mrptPts->setPointIntensity(i, pt.reflectivity);
-    mrptPts->setPointRing(i, pt.line);
+    mrptPts->setPointField_float(i, mrpt::maps::CPointsMap::POINT_FIELD_INTENSITY, pt.reflectivity);
+    mrptPts->setPointField_uint16(i, mrpt::maps::CPointsMap::POINT_FIELD_RING_ID, pt.line);
     // offset_time is in nanoseconds, relative to the scan's header.stamp:
-    mrptPts->setPointTime(i, pt.offset_time * 1e-9F);
+    mrptPts->setPointField_float(
+        i, mrpt::maps::CPointsMap::POINT_FIELD_TIMESTAMP, pt.offset_time * 1e-9F);
   }
 
   return {ptsObs};
