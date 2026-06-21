@@ -426,6 +426,15 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
         {
           const auto m = rosmsg.instantiate<nav_msgs::Odometry>();
           if (!m) continue;
+          const auto& q = m->pose.pose.orientation;
+          if (!std::isfinite(q.x) || !std::isfinite(q.y) || !std::isfinite(q.z) ||
+              !std::isfinite(q.w))
+          {
+            MRPT_LOG_THROTTLE_WARN_FMT(
+                5.0, "Skipping ground-truth pose with non-finite quaternion on topic '%s'.",
+                ground_truth_topic_.c_str());
+            continue;
+          }
           pose = mrpt::ros1bridge::fromROS(m->pose).mean;
           tim  = mrpt::ros1bridge::fromROS(m->header.stamp);
         }
@@ -1005,12 +1014,12 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
       fields.count("t"))
   {
     // XYZIRT
-    auto mrptPts       = mrpt::maps::CPointsMapXYZIRT::Create();
+    auto mrptPts       = mrpt::maps::CGenericPointsMap::Create();
     ptsObs->pointcloud = mrptPts;
 
     if (!mrpt::ros1bridge::fromROS(*pts, *mrptPts))
     {
-      THROW_EXCEPTION("Could not convert pointcloud from ROS to CPointsMapXYZIRT");
+      THROW_EXCEPTION("Could not convert pointcloud from ROS to CGenericPointsMap");
     }
 
     // Fix timestamps for Livox driver:
@@ -1039,14 +1048,14 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
   if (fields.count("intensity"))
   {
     // XYZI
-    auto mrptPts       = mrpt::maps::CPointsMapXYZI::Create();
+    auto mrptPts       = mrpt::maps::CGenericPointsMap::Create();
     ptsObs->pointcloud = mrptPts;
 
     if (!mrpt::ros1bridge::fromROS(*pts, *mrptPts))
     {
       MRPT_LOG_ONCE_WARN(
           "Could not convert pointcloud from ROS to "
-          "CPointsMapXYZI. Trying with XYZ");
+          "CGenericPointsMap. Trying with XYZ");
     }
     else
     {  // converted ok:
