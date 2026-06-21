@@ -59,15 +59,17 @@ The pose of each sensor in the robot body frame is looked up from the bag's
 
 | Param | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `rosbag_filename`    | yes | -          | Path to the input `.bag` file. |
+| `rosbag_filename`    | yes | -          | Path to the input `.bag` file, **or a YAML sequence of paths** to merge and replay jointly in time order (e.g. a sensors bag plus a separate ground-truth-only bag). |
 | `base_link_frame_id` | no  | `base_link`| Robot body frame for tf pose lookup. |
 | `time_warp_scale`    | no  | `1.0`      | Playback speed multiplier. |
 | `read_ahead_length`  | no  | `15`       | Number of messages pre-read ahead. |
 | `start_paused`       | no  | `false`    | Start playback paused. |
 | `sensors`            | no  | auto       | Explicit list of topics, types, and pose overrides. If omitted, all topics with a known mapping are exposed automatically using the topic name as `sensorLabel`. |
+| `ground_truth_topic` | no  | -          | Topic (`geometry_msgs/PoseStamped` or `nav_msgs/Odometry`) pre-scanned at start-up into a full trajectory, exposed via the `mola::OfflineDatasetSource` ground-truth API (`hasGroundTruthTrajectory()` / `getGroundTruthTrajectory()`), e.g. for `evo`-style evaluation. This is independent from (and can be combined with) listing the same topic under `sensors` for normal per-timestep publishing as a `CObservationRobotPose`/`CObservationOdometry`. |
 
 See `mola-cli-launchs/rosbag1_lidar.yaml` for a fully documented `sensors`
-example.
+example, and `mola-cli-launchs/rosbag1_botanicgarden.yaml` for an example
+combining multiple input bags with `ground_truth_topic`.
 
 ## Demos
 
