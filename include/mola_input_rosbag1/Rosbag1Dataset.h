@@ -181,6 +181,8 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
 
   Obs toOdometry(std::string_view msg, const rosbag::MessageInstance& rosmsg);
 
+  Obs toPoseStamped(std::string_view msg, const rosbag::MessageInstance& rosmsg);
+
   Obs toImage(
       std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);

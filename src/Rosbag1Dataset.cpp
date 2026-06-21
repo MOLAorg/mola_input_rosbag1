@@ -28,6 +28,7 @@
 #include <mrpt/obs/CObservationIMU.h>
 #include <mrpt/obs/CObservationImage.h>
 #include <mrpt/obs/CObservationOdometry.h>
+#include <mrpt/obs/CObservationRobotPose.h>
 #include <mrpt/obs/CObservationPointCloud.h>
 #include <mrpt/obs/CObservationRotatingScan.h>
 #include <mrpt/poses/CPose3DPDFGaussian.h>
@@ -42,6 +43,7 @@
 #include <mrpt/ros1bridge/time.h>
 
 // Vendored ROS1 message definitions and rosbag reader:
+#include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <rosbag/bag.h>
@@ -261,6 +263,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       {"sensor_msgs/LaserScan", "CObservation2DRangeScan"},
       {"sensor_msgs/NavSatFix", "CObservationGPS"},
       {"nav_msgs/Odometry", "CObservationOdometry"},
+      {"geometry_msgs/PoseStamped", "CObservationRobotPose"},
   };
 
   MRPT_START
@@ -504,6 +507,12 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     {
       auto callback = [=](const rosbag::MessageInstance& m)
       { return catchExceptions([=]() { return toOdometry(sensorLabel, m); }); };
+      lookup_[topic].emplace_back(callback);
+    }
+    else if (sensorType == "CObservationRobotPose")
+    {
+      auto callback = [=](const rosbag::MessageInstance& m)
+      { return catchExceptions([=]() { return toPoseStamped(sensorLabel, m); }); };
       lookup_[topic].emplace_back(callback);
     }
     else if (!sensorType.empty())
@@ -1077,6 +1086,22 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toOdometry(
   mrptObs->velocityLocal.vx    = odo->twist.twist.linear.x;
   mrptObs->velocityLocal.vy    = odo->twist.twist.linear.y;
   mrptObs->velocityLocal.omega = odo->twist.twist.angular.z;
+
+  return {mrptObs};
+}
+
+Rosbag1Dataset::Obs Rosbag1Dataset::toPoseStamped(
+    std::string_view label, const rosbag::MessageInstance& rosmsg)
+{
+  const auto poseMsg = rosmsg.instantiate<geometry_msgs::PoseStamped>();
+  ASSERT_(poseMsg);
+
+  auto mrptObs = mrpt::obs::CObservationRobotPose::Create();
+
+  mrptObs->sensorLabel = label;
+  mrptObs->timestamp   = mrpt::ros1bridge::fromROS(poseMsg->header.stamp);
+
+  mrptObs->pose.mean = mrpt::ros1bridge::fromROS(poseMsg->pose);
 
   return {mrptObs};
 }
