@@ -23,7 +23,8 @@ modules:
     type: ${MOLA_GUI_MODULE|mola::MolaVizImGui}
     enabled: ${MOLA_ROSBAG1_WITH_GUI|true} # Set MOLA_ROSBAG1_WITH_GUI to false if this file is used jointly to others with their own GUI modules.
     #verbosity_level: DEBUG
-    params: ~ # none
+    params:
+      imgui_app_name: rosbag1_lidar
 
   # Offline or online sensory data source =====================
   - type: mola::Rosbag1Dataset
