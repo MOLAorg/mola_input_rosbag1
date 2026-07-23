@@ -176,10 +176,12 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
       std::string_view label, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
-  /// Converts a Livox `livox_ros_driver/CustomMsg` (used e.g. by the Livox
-  /// AVIA, as in the BotanicGarden dataset) into a CObservationPointCloud
-  /// holding a CPointsMapXYZIRT-like cloud (intensity=reflectivity,
-  /// ring=line, time=offset_time).
+  /// Converts a Livox `livox_ros_driver/CustomMsg` or `livox_ros_driver2/CustomMsg`
+  /// (used e.g. by the Livox AVIA, as in the BotanicGarden dataset) into a
+  /// CObservationPointCloud holding a CPointsMapXYZIRT-like cloud
+  /// (intensity=reflectivity, ring=line, time=offset_time). Both message
+  /// types share the same field layout and MD5 sum, so a single converter
+  /// handles both.
   Obs toLivoxCustomMsg(
       std::string_view label, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);

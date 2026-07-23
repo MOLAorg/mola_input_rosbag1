@@ -263,6 +263,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       {"sensor_msgs/CompressedImage", "CObservationImage"},
       {"sensor_msgs/PointCloud2", "CObservationPointCloud"},
       {"livox_ros_driver/CustomMsg", "CObservationPointCloud"},
+      {"livox_ros_driver2/CustomMsg", "CObservationPointCloud"},
       {"sensor_msgs/LaserScan", "CObservation2DRangeScan"},
       {"sensor_msgs/NavSatFix", "CObservationGPS"},
       {"nav_msgs/Odometry", "CObservationOdometry"},
@@ -564,10 +565,10 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
 
     if (sensorType == "CObservationPointCloud")
     {
-      // Both sensor_msgs/PointCloud2 and livox_ros_driver/CustomMsg map here;
+      // Both sensor_msgs/PointCloud2 and livox_ros_driver(2)/CustomMsg map here;
       // pick the right converter by checking the actual ROS type in the bag.
       const std::string rosType = topic2type.count(topic) ? topic2type.at(topic) : "";
-      if (rosType == "livox_ros_driver/CustomMsg")
+      if (rosType == "livox_ros_driver/CustomMsg" || rosType == "livox_ros_driver2/CustomMsg")
       {
         auto callback = [=](const rosbag::MessageInstance& m) {
           return catchExceptions([=]()
@@ -1081,6 +1082,10 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toLivoxCustomMsg(
     std::string_view label, const rosbag::MessageInstance& rosmsg,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
 {
+  // instantiate<>() matches by MD5 sum, not by type name, and
+  // livox_ros_driver2/CustomMsg shares the exact same field layout and MD5
+  // sum as livox_ros_driver/CustomMsg, so this vendored struct deserializes
+  // both message types.
   const auto msg = rosmsg.instantiate<livox_ros_driver::CustomMsg>();
   ASSERT_(msg);
 

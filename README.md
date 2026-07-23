@@ -32,6 +32,7 @@ Typical uses:
 | `sensor_msgs/Image`       | `CObservationImage` (mono8, mono16, rgb8, bgr8, rgba8, bgra8, bayer_rggb8, bayer_bggr8, bayer_gbrg8, bayer_grbg8) |
 | `sensor_msgs/CompressedImage` | `CObservationImage` (JPEG, PNG, and any format supported by OpenCV `imdecode`) |
 | `sensor_msgs/PointCloud2` | `CObservationPointCloud` (XYZ / XYZI / XYZIRT) or `CObservationRotatingScan` |
+| `livox_ros_driver/CustomMsg`, `livox_ros_driver2/CustomMsg` | `CObservationPointCloud` (XYZIRT: intensity=reflectivity, ring=line, time=offset_time) |
 | `sensor_msgs/LaserScan`   | `CObservation2DRangeScan`      |
 | `sensor_msgs/NavSatFix`   | `CObservationGPS`              |
 | `nav_msgs/Odometry`       | `CObservationOdometry`         |
