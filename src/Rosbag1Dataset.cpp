@@ -563,6 +563,15 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
           "["s + sensor.at("fixed_sensor_pose").as<std::string>() + "]"s);
     }
 
+    // Optional: some drivers stamp messages with an internal clock never
+    // synced to the recording PC's wall clock, which breaks GT time lookups.
+    // See the doc comment on toPointCloud2() for details.
+    bool useBagRecordTime = false;
+    if (sensor.count("use_bag_record_time") != 0)
+    {
+      useBagRecordTime = sensor.at("use_bag_record_time").as<bool>();
+    }
+
     if (sensorType == "CObservationPointCloud")
     {
       // Both sensor_msgs/PointCloud2 and livox_ros_driver(2)/CustomMsg map here;
@@ -571,15 +580,18 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       if (rosType == "livox_ros_driver/CustomMsg" || rosType == "livox_ros_driver2/CustomMsg")
       {
         auto callback = [=](const rosbag::MessageInstance& m) {
-          return catchExceptions([=]()
-                                 { return toLivoxCustomMsg(sensorLabel, m, fixedSensorPose); });
+          return catchExceptions([=]() {
+            return toLivoxCustomMsg(sensorLabel, m, fixedSensorPose, useBagRecordTime);
+          });
         };
         lookup_[topic].emplace_back(callback);
       }
       else
       {
         auto callback = [=](const rosbag::MessageInstance& m) {
-          return catchExceptions([=]() { return toPointCloud2(sensorLabel, m, fixedSensorPose); });
+          return catchExceptions([=]() {
+            return toPointCloud2(sensorLabel, m, fixedSensorPose, useBagRecordTime);
+          });
         };
         lookup_[topic].emplace_back(callback);
       }
@@ -986,14 +998,15 @@ bool Rosbag1Dataset::findOutSensorPose(
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
     std::string_view label, const rosbag::MessageInstance& rosmsg,
-    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
+    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose, bool useBagRecordTime)
 {
   const auto pts = rosmsg.instantiate<sensor_msgs::PointCloud2>();
   ASSERT_(pts);
 
   auto ptsObs         = mrpt::obs::CObservationPointCloud::Create();
   ptsObs->sensorLabel = label;
-  ptsObs->timestamp   = mrpt::ros1bridge::fromROS(pts->header.stamp);
+  ptsObs->timestamp   = useBagRecordTime ? mrpt::ros1bridge::fromROS(rosmsg.getTime())
+                                          : mrpt::ros1bridge::fromROS(pts->header.stamp);
 
   bool sensorPoseOK = findOutSensorPose(
       ptsObs->sensorPose, pts->header.frame_id, base_link_frame_id_, fixedSensorPose, label);
@@ -1080,7 +1093,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toLivoxCustomMsg(
     std::string_view label, const rosbag::MessageInstance& rosmsg,
-    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
+    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose, bool useBagRecordTime)
 {
   // instantiate<>() matches by MD5 sum, not by type name, and
   // livox_ros_driver2/CustomMsg shares the exact same field layout and MD5
@@ -1091,7 +1104,8 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toLivoxCustomMsg(
 
   auto ptsObs         = mrpt::obs::CObservationPointCloud::Create();
   ptsObs->sensorLabel = label;
-  ptsObs->timestamp   = mrpt::ros1bridge::fromROS(msg->header.stamp);
+  ptsObs->timestamp   = useBagRecordTime ? mrpt::ros1bridge::fromROS(rosmsg.getTime())
+                                          : mrpt::ros1bridge::fromROS(msg->header.stamp);
 
   bool sensorPoseOK = findOutSensorPose(
       ptsObs->sensorPose, msg->header.frame_id, base_link_frame_id_, fixedSensorPose, label);

@@ -172,19 +172,27 @@ class Rosbag1Dataset : public RawDataSourceBase, public OfflineDatasetSource, pu
   template <bool isStatic>
   Obs toTf(const rosbag::MessageInstance& rosmsg);
 
+  /// `useBagRecordTime`: some drivers (observed on this dataset's Ouster and
+  /// Livox streams) publish `header.stamp` from an internal/relative clock
+  /// that is never synchronized to the recording PC's wall clock (values
+  /// like "6401.69s" instead of a Unix epoch), which silently breaks any
+  /// ground-truth time lookup. When true, the observation's timestamp is
+  /// taken from the bag's own message storage time
+  /// (`rosbag::MessageInstance::getTime()`, i.e. when the message was
+  /// recorded) instead of the message header, sidestepping the bad clock.
   Obs toPointCloud2(
       std::string_view label, const rosbag::MessageInstance& rosmsg,
-      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose, bool useBagRecordTime = false);
 
   /// Converts a Livox `livox_ros_driver/CustomMsg` or `livox_ros_driver2/CustomMsg`
   /// (used e.g. by the Livox AVIA, as in the BotanicGarden dataset) into a
   /// CObservationPointCloud holding a CPointsMapXYZIRT-like cloud
   /// (intensity=reflectivity, ring=line, time=offset_time). Both message
   /// types share the same field layout and MD5 sum, so a single converter
-  /// handles both.
+  /// handles both. See `toPointCloud2` for `useBagRecordTime`.
   Obs toLivoxCustomMsg(
       std::string_view label, const rosbag::MessageInstance& rosmsg,
-      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose, bool useBagRecordTime = false);
 
   Obs toLidar2D(
       std::string_view msg, const rosbag::MessageInstance& rosmsg,
