@@ -3,8 +3,8 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-Forthcoming
------------
+0.3.0 (2026-07-31)
+------------------
 * fix clang-format
 * Add use_bag_record_time option for drivers with unsynced header stamps
   Some drivers (observed on TIERS's Ouster and Livox streams) publish
