@@ -31,7 +31,7 @@ jobs:
 
           # Rolling Ridley (No End-Of-Life)
           # allow_failure: MOLA/MRPT dependencies not yet released for this distro.
-          - docker_image: ubuntu:noble
+          - docker_image: ubuntu:resolute
             ros_distribution: rolling
             use_ros_testing: true
             allow_failure: true
