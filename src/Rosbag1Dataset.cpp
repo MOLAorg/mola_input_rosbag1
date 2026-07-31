@@ -579,19 +579,20 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       const std::string rosType = topic2type.count(topic) ? topic2type.at(topic) : "";
       if (rosType == "livox_ros_driver/CustomMsg" || rosType == "livox_ros_driver2/CustomMsg")
       {
-        auto callback = [=](const rosbag::MessageInstance& m) {
-          return catchExceptions([=]() {
-            return toLivoxCustomMsg(sensorLabel, m, fixedSensorPose, useBagRecordTime);
-          });
+        auto callback = [=](const rosbag::MessageInstance& m)
+        {
+          return catchExceptions(
+              [=]()
+              { return toLivoxCustomMsg(sensorLabel, m, fixedSensorPose, useBagRecordTime); });
         };
         lookup_[topic].emplace_back(callback);
       }
       else
       {
-        auto callback = [=](const rosbag::MessageInstance& m) {
-          return catchExceptions([=]() {
-            return toPointCloud2(sensorLabel, m, fixedSensorPose, useBagRecordTime);
-          });
+        auto callback = [=](const rosbag::MessageInstance& m)
+        {
+          return catchExceptions(
+              [=]() { return toPointCloud2(sensorLabel, m, fixedSensorPose, useBagRecordTime); });
         };
         lookup_[topic].emplace_back(callback);
       }
@@ -1006,7 +1007,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toPointCloud2(
   auto ptsObs         = mrpt::obs::CObservationPointCloud::Create();
   ptsObs->sensorLabel = label;
   ptsObs->timestamp   = useBagRecordTime ? mrpt::ros1bridge::fromROS(rosmsg.getTime())
-                                          : mrpt::ros1bridge::fromROS(pts->header.stamp);
+                                         : mrpt::ros1bridge::fromROS(pts->header.stamp);
 
   bool sensorPoseOK = findOutSensorPose(
       ptsObs->sensorPose, pts->header.frame_id, base_link_frame_id_, fixedSensorPose, label);
@@ -1105,7 +1106,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toLivoxCustomMsg(
   auto ptsObs         = mrpt::obs::CObservationPointCloud::Create();
   ptsObs->sensorLabel = label;
   ptsObs->timestamp   = useBagRecordTime ? mrpt::ros1bridge::fromROS(rosmsg.getTime())
-                                          : mrpt::ros1bridge::fromROS(msg->header.stamp);
+                                         : mrpt::ros1bridge::fromROS(msg->header.stamp);
 
   bool sensorPoseOK = findOutSensorPose(
       ptsObs->sensorPose, msg->header.frame_id, base_link_frame_id_, fixedSensorPose, label);
