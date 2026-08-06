@@ -66,6 +66,7 @@
 #include <memory>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
+#include <set>
 #include <tf2/buffer_core.hpp>
 #include <tf2/exceptions.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
@@ -966,8 +967,9 @@ std::optional<mola::TransformTree> Rosbag1Dataset::transform_tree(
   }
 
   // Build the parent -> children adjacency of the whole buffer first, so the
-  // subtree below 'root' can then be visited breadth-first (which gives the
-  // "parents before children" order the interface promises).
+  // subtree below 'root' can then be walked depth-first. Each node is emitted
+  // before its own children are queued, which is what gives the "parents
+  // before children" order the interface promises.
   std::vector<std::string> allFrames;
   tfBuffer_->_getFrameStrings(allFrames);
 
@@ -990,6 +992,10 @@ std::optional<mola::TransformTree> Rosbag1Dataset::transform_tree(
   tree.timestamp = timestamp.value_or(mrpt::Clock::now());
   tree.nodes.push_back({root, {}, mrpt::poses::CPose3D::Identity()});
 
+  // 'visited' guards against a cyclic parent chain: tf2 reassigns a frame's
+  // parent on every setTransform(), so malformed input can produce one, and
+  // the walk would otherwise never terminate.
+  std::set<std::string>    visited = {root};
   std::vector<std::string> pending = {root};
   while (!pending.empty())
   {
@@ -1028,6 +1034,11 @@ std::optional<mola::TransformTree> Rosbag1Dataset::transform_tree(
       {
         // A frame with no usable transform at this time is skipped, together
         // with its own subtree (it has no resolvable pose to draw it at).
+        continue;
+      }
+
+      if (!visited.insert(child).second)
+      {
         continue;
       }
 
