@@ -23,6 +23,21 @@ file(GLOB ROSLZ4_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/ros_comm/utilities/roslz4/src
 
 add_library(rosbag STATIC ${ROSBAG_SRCS} ${ROSTIME_SRCS} ${CPP_COMMON_SRCS} ${ROSCPP_SERIALIZATION_SRCS} ${ROSLZ4_SRCS} ${CONSOLE_BRIDGE_SRCS})
 
+# Vendored roslz4 (ros_comm/utilities/roslz4) embeds its own xxhash.c, whose
+# XXH32/XXH32_update/XXH32_digest symbol names collide with those exported by
+# the system's libxxhash.so (pulled in transitively via -llz4 on distros that
+# link liblz4 against a shared libxxhash instead of embedding it). Without
+# hidden visibility, ELF symbol interposition can silently redirect this
+# library's own XXH32_update/XXH32_digest calls to the system library's
+# incompatible internal state layout, corrupting the LZ4 frame checksum while
+# leaving the actual decompressed bytes untouched -- surfacing as a spurious
+# "ROSLZ4_DATA_ERROR: malformed data to decompress" on bags that are not
+# actually corrupt. Hiding this target's symbols keeps its internal calls
+# bound to its own definitions regardless of what else is loaded in-process.
+set_target_properties(rosbag PROPERTIES
+    C_VISIBILITY_PRESET hidden
+    CXX_VISIBILITY_PRESET hidden)
+
 target_include_directories(rosbag SYSTEM PUBLIC
     include
     console_bridge/include
