@@ -3,6 +3,18 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
+0.4.0 (2026-08-07)
+------------------
+* Expose the bag's /tf tree via mola::TransformTreeSource, so other MOLA
+  modules can query the subtree of coordinate frames below a given root
+  (e.g. a legged robot's joints) with poses resolved against it.
+* fix: support missing timestamp channel
+* Hide vendored roslz4/xxhash symbols to prevent collision with a system
+  libxxhash, which could otherwise corrupt LZ4 checksum verification on
+  some distros.
+* update ros rolling to u26.04
+* Contributors: Jose Luis Blanco-Claraco
+
 0.3.0 (2026-07-31)
 ------------------
 * fix clang-format
