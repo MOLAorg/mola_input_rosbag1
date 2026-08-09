@@ -580,20 +580,23 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       const std::string rosType = topic2type.count(topic) ? topic2type.at(topic) : "";
       if (rosType == "livox_ros_driver/CustomMsg" || rosType == "livox_ros_driver2/CustomMsg")
       {
-        auto callback = [=](const rosbag::MessageInstance& m)
+        auto callback =
+            [this, sensorLabel, fixedSensorPose, useBagRecordTime](const rosbag::MessageInstance& m)
         {
           return catchExceptions(
-              [=]()
+              [this, sensorLabel, m, fixedSensorPose, useBagRecordTime]()
               { return toLivoxCustomMsg(sensorLabel, m, fixedSensorPose, useBagRecordTime); });
         };
         lookup_[topic].emplace_back(callback);
       }
       else
       {
-        auto callback = [=](const rosbag::MessageInstance& m)
+        auto callback =
+            [this, sensorLabel, fixedSensorPose, useBagRecordTime](const rosbag::MessageInstance& m)
         {
           return catchExceptions(
-              [=]() { return toPointCloud2(sensorLabel, m, fixedSensorPose, useBagRecordTime); });
+              [this, sensorLabel, m, fixedSensorPose, useBagRecordTime]()
+              { return toPointCloud2(sensorLabel, m, fixedSensorPose, useBagRecordTime); });
         };
         lookup_[topic].emplace_back(callback);
       }
@@ -605,55 +608,71 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       const std::string rosType = topic2type.count(topic) ? topic2type.at(topic) : "";
       if (rosType == "sensor_msgs/CompressedImage")
       {
-        auto callback = [=](const rosbag::MessageInstance& m) {
-          return catchExceptions([=]()
+        auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+        {
+          return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
                                  { return toCompressedImage(sensorLabel, m, fixedSensorPose); });
         };
         lookup_[topic].emplace_back(callback);
       }
       else
       {
-        auto callback = [=](const rosbag::MessageInstance& m)
-        { return catchExceptions([=]() { return toImage(sensorLabel, m, fixedSensorPose); }); };
+        auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+        {
+          return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
+                                 { return toImage(sensorLabel, m, fixedSensorPose); });
+        };
         lookup_[topic].emplace_back(callback);
       }
     }
 
     else if (sensorType == "CObservation2DRangeScan")
     {
-      auto callback = [=](const rosbag::MessageInstance& m)
-      { return catchExceptions([=]() { return toLidar2D(sensorLabel, m, fixedSensorPose); }); };
+      auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+      {
+        return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
+                               { return toLidar2D(sensorLabel, m, fixedSensorPose); });
+      };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationRotatingScan")
     {
-      auto callback = [=](const rosbag::MessageInstance& m) {
-        return catchExceptions([=]() { return toRotatingScan(sensorLabel, m, fixedSensorPose); });
+      auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+      {
+        return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
+                               { return toRotatingScan(sensorLabel, m, fixedSensorPose); });
       };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationIMU")
     {
-      auto callback = [=](const rosbag::MessageInstance& m)
-      { return catchExceptions([=]() { return toIMU(sensorLabel, m, fixedSensorPose); }); };
+      auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+      {
+        return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
+                               { return toIMU(sensorLabel, m, fixedSensorPose); });
+      };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationGPS")
     {
-      auto callback = [=](const rosbag::MessageInstance& m)
-      { return catchExceptions([=]() { return toGPS(sensorLabel, m, fixedSensorPose); }); };
+      auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+      {
+        return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
+                               { return toGPS(sensorLabel, m, fixedSensorPose); });
+      };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationOdometry")
     {
-      auto callback = [=](const rosbag::MessageInstance& m)
-      { return catchExceptions([=]() { return toOdometry(sensorLabel, m); }); };
+      auto callback = [this, sensorLabel](const rosbag::MessageInstance& m)
+      { return catchExceptions([this, sensorLabel, m]() { return toOdometry(sensorLabel, m); }); };
       lookup_[topic].emplace_back(callback);
     }
     else if (sensorType == "CObservationRobotPose")
     {
-      auto callback = [=](const rosbag::MessageInstance& m)
-      { return catchExceptions([=]() { return toPoseStamped(sensorLabel, m); }); };
+      auto callback = [this, sensorLabel](const rosbag::MessageInstance& m) {
+        return catchExceptions([this, sensorLabel, m]() { return toPoseStamped(sensorLabel, m); });
+      };
       lookup_[topic].emplace_back(callback);
     }
     else if (!sensorType.empty())

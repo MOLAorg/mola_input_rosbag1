@@ -7,7 +7,7 @@
 # Released under GNU GPL v3. See LICENSE file
 # ------------------------------------------------------------------------------
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
 # Tell CMake we'll use C++ for use in its tests/flags
 project(mola_input_rosbag1 LANGUAGES C CXX)
