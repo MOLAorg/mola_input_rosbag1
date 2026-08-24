@@ -1070,8 +1070,26 @@ std::optional<mola::TransformTree> Rosbag1Dataset::transform_tree(
 }
 #endif
 
+namespace
+{
+/** Drops one leading '/' from a TF frame name.
+ *
+ * ROS 1-era recordings routinely carry frame ids like "/os1_lidar", while
+ * tf2 canonicalizes names when they are inserted (BufferCore::setTransform
+ * strips the slash), so the tree ends up holding "os1_lidar". Looking it up
+ * with the raw header value therefore never matches, and every observation
+ * from such a bag gets dropped. Canonicalizing here too makes both sides
+ * agree, which is what tf2 itself does.
+ */
+std::string stripLeadingSlash(const std::string& frame)
+{
+  if (frame.size() > 1 && frame.front() == '/') return frame.substr(1);
+  return frame;
+}
+}  // namespace
+
 bool Rosbag1Dataset::findOutSensorPose(
-    mrpt::poses::CPose3D& des, const std::string& frame, const std::string& referenceFrame,
+    mrpt::poses::CPose3D& des, const std::string& frameRaw, const std::string& referenceFrameRaw,
     const std::optional<mrpt::poses::CPose3D>& fixedSensorPose, const std::string_view label)
 {
   if (fixedSensorPose)
@@ -1079,6 +1097,9 @@ bool Rosbag1Dataset::findOutSensorPose(
     des = fixedSensorPose.value();
     return true;
   }
+
+  const std::string frame          = stripLeadingSlash(frameRaw);
+  const std::string referenceFrame = stripLeadingSlash(referenceFrameRaw);
 
   try
   {
@@ -1102,13 +1123,18 @@ bool Rosbag1Dataset::findOutSensorPose(
     // Avoid throwing here (it would be very slow due to backtrace generation
     // when it happens for many messages): just warn (throttled) and let the
     // caller drop this single observation.
-    MRPT_LOG_THROTTLE_WARN_FMT(
-        5.0,
-        "[findOutSensorPose] Could not look up transform '%s' <- '%s' (label='%s'): %s\n"
-        "Dropping affected observations until the transform becomes available. "
-        "Currently known tf frames:\n%s",
-        referenceFrame.c_str(), frame.c_str(), std::string(label).c_str(), ex.what(),
-        tfBuffer_->allFramesAsString().c_str());
+    // Built as a stream, not with a printf-style variadic call. The former
+    // FMT version of this line segfaulted: a mismatch between its format
+    // string and its arguments had printf walk a non-pointer, so a path whose
+    // whole purpose is to warn and continue took the process down instead.
+    // A warning must never be able to do that, whatever provoked it.
+    MRPT_LOG_THROTTLE_WARN_STREAM(
+        5.0, "[findOutSensorPose] Could not look up transform '"
+                 << referenceFrame << "' <- '" << frame << "' (label='" << std::string(label)
+                 << "'): " << ex.what()
+                 << "\nDropping affected observations until the transform becomes available. "
+                    "Currently known tf frames:\n"
+                 << tfBuffer_->allFramesAsString());
     return false;
   }
 }
