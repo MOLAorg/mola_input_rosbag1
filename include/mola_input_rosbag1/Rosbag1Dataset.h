@@ -116,6 +116,7 @@ class Rosbag1Dataset : public RawDataSourceBase,
     auto lck       = mrpt::lockHelper(dataset_ui_mtx_);
     teleport_here_ = timestep;
   }
+#if defined(MOLA_KERNEL_DATASET_UI_HAS_TIME)
   std::optional<double> datasetUI_time() const override
   {
     auto lck = mrpt::lockHelper(dataset_ui_mtx_);
@@ -126,6 +127,7 @@ class Rosbag1Dataset : public RawDataSourceBase,
     auto lck = mrpt::lockHelper(dataset_ui_mtx_);
     return dataset_total_time_;
   }
+#endif
 
 #if defined(MOLA_HAS_TRANSFORM_TREE_SOURCE)
   // Virtual interface of TransformTreeSource (see docs in base class)
