@@ -322,6 +322,13 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   // Message count:
   bagMessageCount_ = bag_reader_->full_view.size();
 
+  // Total time span of the input bag(s), for the GUI:
+  if (bagMessageCount_ > 0)
+  {
+    dataset_total_time_ =
+        (bag_reader_->full_view.getEndTime() - bag_reader_->full_view.getBeginTime()).toSec();
+  }
+
   MRPT_LOG_INFO_STREAM("List of topics found in the bag (" << bagMessageCount_ << " msgs)");
 
   // Build map: topic name -> type
@@ -864,6 +871,7 @@ void Rosbag1Dataset::spinOnce()
     auto lck = mrpt::lockHelper(dataset_ui_mtx_);
 
     last_used_tim_index_ = rosbag_next_idx_;
+    ui_dataset_time_     = last_dataset_time_;
   }
 
   MRPT_END

@@ -116,6 +116,16 @@ class Rosbag1Dataset : public RawDataSourceBase,
     auto lck       = mrpt::lockHelper(dataset_ui_mtx_);
     teleport_here_ = timestep;
   }
+  std::optional<double> datasetUI_time() const override
+  {
+    auto lck = mrpt::lockHelper(dataset_ui_mtx_);
+    return ui_dataset_time_;
+  }
+  std::optional<double> datasetUI_total_time() const override
+  {
+    auto lck = mrpt::lockHelper(dataset_ui_mtx_);
+    return dataset_total_time_;
+  }
 
 #if defined(MOLA_HAS_TRANSFORM_TREE_SOURCE)
   // Virtual interface of TransformTreeSource (see docs in base class)
@@ -149,6 +159,12 @@ class Rosbag1Dataset : public RawDataSourceBase,
 
   std::optional<mrpt::Clock::time_point> last_play_wallclock_time_;
   double                                 last_dataset_time_ = 0;
+
+  /// Copy of last_dataset_time_ for the GUI, guarded by dataset_ui_mtx_.
+  double ui_dataset_time_ = 0;
+
+  /// Time span covered by all input bags [s], from their headers.
+  std::optional<double> dataset_total_time_;
 
   struct BagInfo;
   std::shared_ptr<BagInfo> bag_reader_;
