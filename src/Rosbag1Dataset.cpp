@@ -20,6 +20,7 @@
 #include <mola_input_rosbag1/Rosbag1Dataset.h>
 #include <mola_yaml/yaml_helpers.h>
 #include <mrpt/containers/yaml.h>
+#include <mrpt/core/bits_math.h>
 #include <mrpt/core/initializer.h>
 #include <mrpt/img/CImage.h>
 #include <mrpt/maps/CGenericPointsMap.h>
@@ -45,6 +46,7 @@
 
 // Vendored ROS1 message definitions and rosbag reader:
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <livox_ros_driver/CustomMsg.h>
 #include <nav_msgs/Odometry.h>
@@ -269,6 +271,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       {"sensor_msgs/NavSatFix", "CObservationGPS"},
       {"nav_msgs/Odometry", "CObservationOdometry"},
       {"geometry_msgs/PoseStamped", "CObservationRobotPose"},
+      {"geometry_msgs/PoseWithCovarianceStamped", "CObservationRobotPose"},
   };
 
   MRPT_START
@@ -677,8 +680,10 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     }
     else if (sensorType == "CObservationRobotPose")
     {
-      auto callback = [this, sensorLabel](const rosbag::MessageInstance& m) {
-        return catchExceptions([this, sensorLabel, m]() { return toPoseStamped(sensorLabel, m); });
+      auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+      {
+        return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
+                               { return toRobotPose(sensorLabel, m, fixedSensorPose); });
       };
       lookup_[topic].emplace_back(callback);
     }
@@ -1430,18 +1435,70 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toOdometry(
   return {mrptObs};
 }
 
-Rosbag1Dataset::Obs Rosbag1Dataset::toPoseStamped(
-    std::string_view label, const rosbag::MessageInstance& rosmsg)
+namespace
 {
-  const auto poseMsg = rosmsg.instantiate<geometry_msgs::PoseStamped>();
-  ASSERT_(poseMsg);
+/// A source that leaves `pose.covariance` all zeros is not claiming a perfect
+/// measurement, it is not filling the field in. Substitute something usable so
+/// downstream fusion does not read it as infinite confidence.
+void fillInDefaultPoseCovariance(mrpt::poses::CPose3DPDFGaussian& p)
+{
+  if (p.cov != mrpt::math::CMatrixDouble66::Zero())
+  {
+    return;
+  }
+  const double sigmaXYZ = 0.10;  // [m]
+  const double sigmaAng = mrpt::DEG2RAD(2.0);  // [rad]
+  for (int k = 0; k < 3; k++)
+  {
+    p.cov(k, k) = mrpt::square(sigmaXYZ);
+  }
+  for (int k = 3; k < 6; k++)
+  {
+    p.cov(k, k) = mrpt::square(sigmaAng);
+  }
+}
+}  // namespace
 
-  auto mrptObs = mrpt::obs::CObservationRobotPose::Create();
-
+Rosbag1Dataset::Obs Rosbag1Dataset::toRobotPose(
+    std::string_view label, const rosbag::MessageInstance& rosmsg,
+    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
+{
+  auto mrptObs         = mrpt::obs::CObservationRobotPose::Create();
   mrptObs->sensorLabel = label;
-  mrptObs->timestamp   = mrpt::ros1bridge::fromROS(poseMsg->header.stamp);
+  // Unlike CObservationOdometry, this type can carry a sensor pose, so a
+  // source reported for a frame other than base_link remains usable here:
+  if (fixedSensorPose.has_value())
+  {
+    mrptObs->sensorPose = *fixedSensorPose;
+  }
 
-  mrptObs->pose.mean = mrpt::ros1bridge::fromROS(poseMsg->pose);
+  if (const auto m = rosmsg.instantiate<geometry_msgs::PoseStamped>(); m)
+  {
+    mrptObs->timestamp = mrpt::ros1bridge::fromROS(m->header.stamp);
+    mrptObs->pose.mean = mrpt::ros1bridge::fromROS(m->pose);
+    // geometry_msgs/PoseStamped carries no covariance at all:
+    fillInDefaultPoseCovariance(mrptObs->pose);
+  }
+  else if (const auto m2 = rosmsg.instantiate<geometry_msgs::PoseWithCovarianceStamped>(); m2)
+  {
+    mrptObs->timestamp = mrpt::ros1bridge::fromROS(m2->header.stamp);
+    mrptObs->pose      = mrpt::ros1bridge::fromROS(m2->pose);
+    fillInDefaultPoseCovariance(mrptObs->pose);
+  }
+  else if (const auto m3 = rosmsg.instantiate<nav_msgs::Odometry>(); m3)
+  {
+    mrptObs->timestamp = mrpt::ros1bridge::fromROS(m3->header.stamp);
+    mrptObs->pose      = mrpt::ros1bridge::fromROS(m3->pose);
+    fillInDefaultPoseCovariance(mrptObs->pose);
+  }
+  else
+  {
+    THROW_EXCEPTION_FMT(
+        "Topic for sensorLabel '%s' was declared as 'CObservationRobotPose' but its messages are "
+        "none of geometry_msgs/PoseStamped, geometry_msgs/PoseWithCovarianceStamped or "
+        "nav_msgs/Odometry.",
+        std::string(label).c_str());
+  }
 
   return {mrptObs};
 }
