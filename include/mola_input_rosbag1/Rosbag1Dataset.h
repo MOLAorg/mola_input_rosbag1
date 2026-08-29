@@ -251,7 +251,19 @@ class Rosbag1Dataset : public RawDataSourceBase,
 
   Obs toOdometry(std::string_view msg, const rosbag::MessageInstance& rosmsg);
 
-  Obs toPoseStamped(std::string_view msg, const rosbag::MessageInstance& rosmsg);
+  /// Builds a CObservationRobotPose, which carries a full SE(3) pose plus its
+  /// 6x6 covariance, from any of `geometry_msgs/PoseStamped`,
+  /// `geometry_msgs/PoseWithCovarianceStamped` or `nav_msgs/Odometry`.
+  ///
+  /// For `nav_msgs/Odometry` this is the lossless alternative to toOdometry():
+  /// CObservationOdometry is planar, so it can only carry (x, y, yaw) and a
+  /// 2D twist, dropping z, roll, pitch and the covariance that a 3D source
+  /// (legged robot, VIO, aerial platform) actually publishes. Select it with
+  /// an explicit `type: CObservationRobotPose` on the topic; the automatic
+  /// mapping for `nav_msgs/Odometry` stays CObservationOdometry.
+  Obs toRobotPose(
+      std::string_view msg, const rosbag::MessageInstance& rosmsg,
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
   Obs toImage(
       std::string_view msg, const rosbag::MessageInstance& rosmsg,

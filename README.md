@@ -35,8 +35,25 @@ Typical uses:
 | `livox_ros_driver/CustomMsg`, `livox_ros_driver2/CustomMsg` | `CObservationPointCloud` (XYZIRT: intensity=reflectivity, ring=line, time=offset_time) |
 | `sensor_msgs/LaserScan`   | `CObservation2DRangeScan`      |
 | `sensor_msgs/NavSatFix`   | `CObservationGPS`              |
-| `nav_msgs/Odometry`       | `CObservationOdometry`         |
+| `nav_msgs/Odometry`       | `CObservationOdometry` (planar; see note below) |
+| `geometry_msgs/PoseStamped`, `geometry_msgs/PoseWithCovarianceStamped` | `CObservationRobotPose` (full SE(3) + 6x6 covariance) |
 | `tf2_msgs/TFMessage` (`/tf`, `/tf_static`) | transform tree (sensor pose lookup) |
+
+`CObservationOdometry` is a planar type: it holds only `(x, y, yaw)` and a 2D
+twist `(vx, vy, wz)`. For a 3D odometry source -- a legged robot, a VIO, an
+aerial platform -- that discards `z`, roll, pitch and the covariance the source
+publishes. To keep them, ask for the SE(3) type explicitly:
+
+```yaml
+sensors:
+  - topic: /state_estimator/odometry
+    sensorLabel: odom
+    type: CObservationRobotPose   # instead of the automatic CObservationOdometry
+```
+
+The automatic mapping is unchanged, so existing configurations keep the planar
+behavior. A source that publishes an all-zero covariance is given a default of
+10 cm / 2 deg rather than being read as an exact measurement.
 
 Topics with no known mapping are ignored (a one-time warning is logged).
 
