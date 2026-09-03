@@ -118,23 +118,23 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
 
   const std::string& encoding = image.encoding;
 
-  bool         color       = false;
-  bool         swapRedBlue = false;
-  unsigned int channels    = 0;
+  mrpt::img::TImageChannels color       = mrpt::img::CH_GRAY;
+  bool                      swapRedBlue = false;
+  unsigned int              channels    = 0;
   if (encoding == enc::MONO8)
   {
-    color    = false;
+    color    = mrpt::img::CH_GRAY;
     channels = 1;
   }
   else if (encoding == enc::BGR8)
   {
-    color       = true;
+    color       = mrpt::img::CH_RGB;
     channels    = 3;
     swapRedBlue = false;
   }
   else if (encoding == enc::RGB8)
   {
-    color       = true;
+    color       = mrpt::img::CH_RGB;
     channels    = 3;
     swapRedBlue = true;
   }
@@ -151,7 +151,7 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
       for (unsigned int col = 0; col < w; col++)
         dstRow[col] = static_cast<uint8_t>(srcRow[col] >> 8);
     }
-    out.loadFromMemoryBuffer(w, h, false /*grayscale*/, buf.data());
+    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_GRAY /*grayscale*/, buf.data());
     return out;
   }
   else if (
@@ -175,7 +175,7 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
     cv::Mat bgr;
     cv::cvtColor(src, bgr, code);
     mrpt::img::CImage out;
-    out.loadFromMemoryBuffer(w, h, true /*color*/, bgr.data, false /*already BGR*/);
+    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB /*color*/, bgr.data, false /*already BGR*/);
     return out;
   }
   else if (encoding == enc::RGBA8)
@@ -186,7 +186,7 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
     cv::Mat bgr;
     cv::cvtColor(src, bgr, cv::COLOR_RGBA2BGR);
     mrpt::img::CImage out;
-    out.loadFromMemoryBuffer(w, h, true, bgr.data, false);
+    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB, bgr.data, false);
     return out;
   }
   else if (encoding == enc::BGRA8)
@@ -197,7 +197,7 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
     cv::Mat bgr;
     cv::cvtColor(src, bgr, cv::COLOR_BGRA2BGR);
     mrpt::img::CImage out;
-    out.loadFromMemoryBuffer(w, h, true, bgr.data, false);
+    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB, bgr.data, false);
     return out;
   }
   else
@@ -526,21 +526,21 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
 
   for (auto& sensorNode : sensorsYaml.asSequence())
   {
-    const auto&       sensor = sensorNode.asMap();
-    const std::string topic  = sensor.at("topic").as<std::string>();
+    const mrpt::containers::yaml sensor(sensorNode);
+    const std::string            topic = sensor["topic"].as<std::string>();
 
     std::string sensorLabel = topic;
-    if (sensor.count("sensorLabel") != 0)
+    if (sensor.has("sensorLabel"))
     {
-      sensorLabel = sensor.at("sensorLabel").as<std::string>();
+      sensorLabel = sensor["sensorLabel"].as<std::string>();
     }
 
     // Map to MOLA class: auto or manual:
     std::string sensorType;
 
-    if (sensor.count("type") != 0)
+    if (sensor.has("type"))
     {
-      sensorType = sensor.at("type").as<std::string>();
+      sensorType = sensor["type"].as<std::string>();
     }
     else
     {
@@ -567,20 +567,20 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
 
     // Optional: fixed sensorPose (then ignores/don't need "tf" data):
     std::optional<mrpt::poses::CPose3D> fixedSensorPose;
-    if (sensor.count("fixed_sensor_pose") != 0 && (sensor.count("use_fixed_sensor_pose") == 0 ||
-                                                   sensor.at("use_fixed_sensor_pose").as<bool>()))
+    if (sensor.has("fixed_sensor_pose") &&
+        (!sensor.has("use_fixed_sensor_pose") || sensor["use_fixed_sensor_pose"].as<bool>()))
     {
       fixedSensorPose = mrpt::poses::CPose3D::FromString(
-          "["s + sensor.at("fixed_sensor_pose").as<std::string>() + "]"s);
+          "["s + sensor["fixed_sensor_pose"].as<std::string>() + "]"s);
     }
 
     // Optional: some drivers stamp messages with an internal clock never
     // synced to the recording PC's wall clock, which breaks GT time lookups.
     // See the doc comment on toPointCloud2() for details.
     bool useBagRecordTime = false;
-    if (sensor.count("use_bag_record_time") != 0)
+    if (sensor.has("use_bag_record_time"))
     {
-      useBagRecordTime = sensor.at("use_bag_record_time").as<bool>();
+      useBagRecordTime = sensor["use_bag_record_time"].as<bool>();
     }
 
     if (sensorType == "CObservationPointCloud")
@@ -1550,7 +1550,8 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toCompressedImage(
   }
 
   // imdecode returns BGR; convert to the channel count MRPT expects:
-  const bool isColor = (decoded.channels() == 3);
+  const mrpt::img::TImageChannels channels =
+      (decoded.channels() == 3) ? mrpt::img::CH_RGB : mrpt::img::CH_GRAY;
   if (decoded.channels() == 4)
   {
     cv::cvtColor(decoded, decoded, cv::COLOR_BGRA2BGR);
@@ -1560,7 +1561,7 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toCompressedImage(
   imgObs->sensorLabel = label;
   imgObs->timestamp   = mrpt::ros1bridge::fromROS(image->header.stamp);
   imgObs->image.loadFromMemoryBuffer(
-      static_cast<unsigned int>(decoded.cols), static_cast<unsigned int>(decoded.rows), isColor,
+      static_cast<unsigned int>(decoded.cols), static_cast<unsigned int>(decoded.rows), channels,
       decoded.data, false /*already BGR*/);
 
   bool sensorPoseOK = findOutSensorPose(

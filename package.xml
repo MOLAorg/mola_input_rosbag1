@@ -15,8 +15,8 @@
 
   <depend>mola_common</depend>
   <depend>mola_kernel</depend>
-  <depend>mrpt_libobs</depend>
-  <depend>mrpt_libmaps</depend>
+  <depend>mrpt_obs</depend>
+  <depend>mrpt_maps</depend>
   <!-- mrpt_libros_bridge is vendored here as a git submodule (mrpt_ros_bridge/)
        until it is released within MRPT itself. -->
   <!-- ROS1 message definitions and rosbag (de)serialization are vendored under

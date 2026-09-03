@@ -15,8 +15,8 @@ project(mola_input_rosbag1 LANGUAGES C CXX)
 # MOLA CMake scripts: "mola_xxx()"
 find_package(mola_common REQUIRED)
 # find dependencies:
-find_package(mrpt-obs REQUIRED)
-find_package(mrpt-maps REQUIRED)
+find_package(mrpt_obs REQUIRED)
+find_package(mrpt_maps REQUIRED)
 # ROS1 (de)serialization and message definitions are vendored (see ros1/ and
 # mrpt_ros_bridge/ subdirectories), so a ROS1 installation is NOT required.
 # We only use ROS2 tf2 for the transform tree:
@@ -43,8 +43,8 @@ mola_add_library(
   SOURCES ${LIB_SRCS} ${LIB_PUBLIC_HDRS}
   PRIVATE_LINK_LIBRARIES
     mola::mola_kernel
-    mrpt::obs
-    mrpt::maps
+    mrpt::mrpt_obs
+    mrpt::mrpt_maps
     mrpt_ros1bridge
     tf2::tf2
     tf2_geometry_msgs::tf2_geometry_msgs
@@ -52,7 +52,7 @@ mola_add_library(
     ${OpenCV_LIBS}
   CMAKE_DEPENDENCIES
     mola_kernel
-    mrpt-obs
+    mrpt_obs
     #mrpt-ros1bridge  (internal to this package for now)
 )
 
@@ -103,8 +103,8 @@ add_library(mrpt_ros1bridge STATIC ${LIB_SRCS} ${LIB_PUBLIC_HDRS})
 set_target_properties(mrpt_ros1bridge PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(mrpt_ros1bridge
   PUBLIC
-   mrpt::maps
-   mrpt::obs
+   mrpt::mrpt_maps
+   mrpt::mrpt_obs
    tf2::tf2
 )
 target_include_directories(mrpt_ros1bridge
