@@ -35,6 +35,7 @@
 #include <mrpt/obs/CObservationRotatingScan.h>
 #include <mrpt/poses/CPose3DPDFGaussian.h>
 #include <mrpt/system/filesystem.h>
+#include <mrpt/system/string_utils.h>
 
 // MRPT <-> ROS1 message conversions (vendored mrpt_ros1bridge sub-library):
 #include <mrpt/ros1bridge/gps.h>
@@ -285,22 +286,40 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   // 'rosbag_filename' may be either a single scalar path, or a YAML sequence
   // of paths, so that several .bag files (e.g. a sensors bag plus a separate
   // ground-truth-only bag) can be merged and replayed jointly, in time order.
+  //
+  // Each entry may itself be a comma-separated list of paths, which is how a
+  // recording split into many parts is passed through a single string: it is
+  // already the convention of the offline CLI's "--input-rosbag1 a.bag,b.bag",
+  // and a launch file can only offer a fixed number of sequence slots, so
+  // without this a dataset with more parts than slots cannot be replayed
+  // online at all.
   ENSURE_YAML_ENTRY_EXISTS(cfg, "rosbag_filename");
   const auto rosbagFilenameNode = cfg["rosbag_filename"];
+
+  const auto appendBagsFrom = [this](const std::string& entry)
+  {
+    std::vector<std::string> parts;
+    mrpt::system::tokenize(entry, ",", parts);
+    for (const auto& p : parts)
+    {
+      // Skip empty entries, e.g. coming from an unset "${OPTIONAL_BAG|}"
+      // mola-cli environment-variable placeholder, so that a second
+      // (ground-truth) bag can be made optional in a launch file.
+      if (const auto s = mrpt::system::trim(p); !s.empty()) rosbag_filenames_.push_back(s);
+    }
+  };
+
   if (rosbagFilenameNode.isSequence())
   {
     const auto seq = rosbagFilenameNode.asSequence();
     for (const auto& f : seq)
     {
-      // Skip empty entries, e.g. coming from an unset "${OPTIONAL_BAG|}"
-      // mola-cli environment-variable placeholder, so that a second
-      // (ground-truth) bag can be made optional in a launch file.
-      if (auto s = f.as<std::string>(); !s.empty()) rosbag_filenames_.push_back(s);
+      appendBagsFrom(f.as<std::string>());
     }
   }
   else
   {
-    rosbag_filenames_.push_back(rosbagFilenameNode.as<std::string>());
+    appendBagsFrom(rosbagFilenameNode.as<std::string>());
   }
   ASSERT_(!rosbag_filenames_.empty());
   rosbag_filename_ = rosbag_filenames_.front();
