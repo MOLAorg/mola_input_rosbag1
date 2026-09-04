@@ -20,6 +20,7 @@
  *  dataset exposes its /tf tree to other MOLA modules. */
 #define MOLA_HAS_TRANSFORM_TREE_SOURCE 1
 #endif
+#include <mrpt/img/TCamera.h>
 #include <mrpt/obs/CSensoryFrame.h>
 #include <mrpt/poses/CPose3D.h>
 
@@ -265,13 +266,19 @@ class Rosbag1Dataset : public RawDataSourceBase,
       std::string_view msg, const rosbag::MessageInstance& rosmsg,
       const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
 
+  /// `fixedCameraParams`: intrinsics resolved once at registration time, either
+  /// auto-discovered from a sibling `sensor_msgs/CameraInfo` topic (see
+  /// `findCameraInfoTopic()`) or left empty if none was found, in which case
+  /// `CObservationImage::cameraParams` keeps its default (all-zero) value.
   Obs toImage(
       std::string_view msg, const rosbag::MessageInstance& rosmsg,
-      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose,
+      const std::optional<mrpt::img::TCamera>&   fixedCameraParams);
 
   Obs toCompressedImage(
       std::string_view msg, const rosbag::MessageInstance& rosmsg,
-      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose);
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose,
+      const std::optional<mrpt::img::TCamera>&   fixedCameraParams);
 
   Obs catchExceptions(const std::function<Obs()>& f);
 

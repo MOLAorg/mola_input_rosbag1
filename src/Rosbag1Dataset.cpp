@@ -52,6 +52,7 @@
 #include <nav_msgs/Odometry.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
+#include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/CompressedImage.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
@@ -233,6 +234,62 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
   }
 
   return out;
+}
+
+/** Manual conversion sensor_msgs/CameraInfo -> mrpt::img::TCamera. Unknown
+ *  distortion models are left as DistortionModel::none (a throttled warning
+ *  is logged by the caller) rather than guessing a wrong one. */
+mrpt::img::TCamera cameraInfoFromROS(const sensor_msgs::CameraInfo& info)
+{
+  mrpt::img::TCamera cam;
+  cam.ncols = info.width;
+  cam.nrows = info.height;
+  cam.setIntrinsicParamsFromValues(info.K[0], info.K[4], info.K[2], info.K[5]);
+
+  const std::vector<double>& d = info.D;
+  if (info.distortion_model == "plumb_bob")
+  {
+    cam.setDistortionPlumbBob(
+        d.size() > 0 ? d[0] : 0.0, d.size() > 1 ? d[1] : 0.0, d.size() > 2 ? d[2] : 0.0,
+        d.size() > 3 ? d[3] : 0.0, d.size() > 4 ? d[4] : 0.0);
+  }
+  else if (info.distortion_model == "equidistant" || info.distortion_model == "fisheye" ||
+           info.distortion_model == "kannala_brandt")
+  {
+    cam.setDistortionKannalaBrandt(
+        d.size() > 0 ? d[0] : 0.0, d.size() > 1 ? d[1] : 0.0, d.size() > 2 ? d[2] : 0.0,
+        d.size() > 3 ? d[3] : 0.0);
+  }
+  return cam;
+}
+
+/** Finds the `sensor_msgs/CameraInfo` topic paired with an image topic,
+ *  following the standard ROS `image_transport` convention: the info topic
+ *  lives at the parent namespace of the (possibly transport-suffixed) image
+ *  topic, e.g. ".../cam/image_raw/compressed" pairs with
+ *  ".../cam/camera_info". Walks up the topic path one segment at a time so it
+ *  also matches ".../cam/image_raw" directly, without hardcoding "image_raw"
+ *  or any particular transport suffix. */
+std::optional<std::string> findCameraInfoTopic(
+    const std::string& imageTopic, const std::map<std::string, std::string>& topic2type)
+{
+  std::string prefix = imageTopic;
+  for (;;)
+  {
+    const auto slashPos = prefix.find_last_of('/');
+    if (slashPos == std::string::npos || slashPos == 0)
+    {
+      break;
+    }
+    prefix               = prefix.substr(0, slashPos);
+    const auto candidate = prefix + "/camera_info";
+    const auto it        = topic2type.find(candidate);
+    if (it != topic2type.end() && it->second == "sensor_msgs/CameraInfo")
+    {
+      return candidate;
+    }
+  }
+  return std::nullopt;
 }
 }  // namespace
 
@@ -613,24 +670,63 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     }
     else if (sensorType == "CObservationImage")
     {
+      // Auto-discover this image topic's paired sensor_msgs/CameraInfo topic
+      // (if any) and pre-scan its first message, so CObservationImage::
+      // cameraParams is populated without requiring a launch-file override.
+      std::optional<mrpt::img::TCamera> fixedCameraParams;
+      if (const auto infoTopic = findCameraInfoTopic(topic, topic2type); infoTopic)
+      {
+        rosbag::View infoView;
+        for (const auto& bag : bag_reader_->bags)
+        {
+          infoView.addQuery(*bag, rosbag::TopicQuery(std::vector<std::string>({*infoTopic})));
+        }
+        auto it = infoView.begin();
+        if (it != infoView.end())
+        {
+          if (const auto info = it->instantiate<sensor_msgs::CameraInfo>(); info)
+          {
+            fixedCameraParams = cameraInfoFromROS(*info);
+            MRPT_LOG_INFO_FMT(
+                "- '%s': camera intrinsics from '%s' (%ux%u, fx=%.2f, fy=%.2f)",
+                sensorLabel.c_str(), infoTopic->c_str(), fixedCameraParams->ncols,
+                fixedCameraParams->nrows, fixedCameraParams->fx(), fixedCameraParams->fy());
+          }
+        }
+      }
+      else
+      {
+        MRPT_LOG_WARN_FMT(
+            "- '%s' (topic '%s'): no matching sensor_msgs/CameraInfo topic found; "
+            "CObservationImage::cameraParams will be left at its default (zero) value.",
+            sensorLabel.c_str(), topic.c_str());
+      }
+
       // Both sensor_msgs/Image and sensor_msgs/CompressedImage map here;
       // pick the right converter by checking the actual ROS type in the bag.
       const std::string rosType = topic2type.count(topic) ? topic2type.at(topic) : "";
       if (rosType == "sensor_msgs/CompressedImage")
       {
-        auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+        auto callback =
+            [this, sensorLabel, fixedSensorPose, fixedCameraParams](
+                const rosbag::MessageInstance& m)
         {
-          return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
-                                 { return toCompressedImage(sensorLabel, m, fixedSensorPose); });
+          return catchExceptions(
+              [this, sensorLabel, m, fixedSensorPose, fixedCameraParams]() {
+                return toCompressedImage(sensorLabel, m, fixedSensorPose, fixedCameraParams);
+              });
         };
         lookup_[topic].emplace_back(callback);
       }
       else
       {
-        auto callback = [this, sensorLabel, fixedSensorPose](const rosbag::MessageInstance& m)
+        auto callback =
+            [this, sensorLabel, fixedSensorPose, fixedCameraParams](
+                const rosbag::MessageInstance& m)
         {
-          return catchExceptions([this, sensorLabel, m, fixedSensorPose]()
-                                 { return toImage(sensorLabel, m, fixedSensorPose); });
+          return catchExceptions(
+              [this, sensorLabel, m, fixedSensorPose, fixedCameraParams]()
+              { return toImage(sensorLabel, m, fixedSensorPose, fixedCameraParams); });
         };
         lookup_[topic].emplace_back(callback);
       }
@@ -1505,7 +1601,8 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toRobotPose(
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
     std::string_view label, const rosbag::MessageInstance& rosmsg,
-    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
+    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose,
+    const std::optional<mrpt::img::TCamera>&   fixedCameraParams)
 {
   const auto image = rosmsg.instantiate<sensor_msgs::Image>();
   ASSERT_(image);
@@ -1519,6 +1616,11 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
   // depend on cv_bridge (which would require its ROS2 message types):
   imgObs->image = imageFromROS(*image);
 
+  if (fixedCameraParams)
+  {
+    imgObs->cameraParams = *fixedCameraParams;
+  }
+
   bool sensorPoseOK = findOutSensorPose(
       imgObs->cameraPose, image->header.frame_id, base_link_frame_id_, fixedSensorPose, label);
   if (!sensorPoseOK)
@@ -1531,7 +1633,8 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toImage(
 
 Rosbag1Dataset::Obs Rosbag1Dataset::toCompressedImage(
     std::string_view label, const rosbag::MessageInstance& rosmsg,
-    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose)
+    const std::optional<mrpt::poses::CPose3D>& fixedSensorPose,
+    const std::optional<mrpt::img::TCamera>&   fixedCameraParams)
 {
   const auto image = rosmsg.instantiate<sensor_msgs::CompressedImage>();
   ASSERT_(image);
@@ -1563,6 +1666,11 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toCompressedImage(
   imgObs->image.loadFromMemoryBuffer(
       static_cast<unsigned int>(decoded.cols), static_cast<unsigned int>(decoded.rows), channels,
       decoded.data, false /*already BGR*/);
+
+  if (fixedCameraParams)
+  {
+    imgObs->cameraParams = *fixedCameraParams;
+  }
 
   bool sensorPoseOK = findOutSensorPose(
       imgObs->cameraPose, image->header.frame_id, base_link_frame_id_, fixedSensorPose, label);
