@@ -160,6 +160,10 @@ class Rosbag1Dataset : public RawDataSourceBase,
   std::optional<mrpt::Clock::time_point> rosbag_begin_time_;
   size_t                                 read_ahead_length_ = 15;
 
+  /// Per-topic constant clock correction in seconds, from each sensor's
+  /// optional `time_offset`. Empty unless some sensor declares one.
+  std::map<std::string, double> topic_time_offset_;
+
   std::optional<mrpt::Clock::time_point> last_play_wallclock_time_;
   double                                 last_dataset_time_ = 0;
 

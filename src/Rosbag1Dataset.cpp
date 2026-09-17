@@ -676,6 +676,23 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       useBagRecordTime = sensor["use_bag_record_time"].as<bool>();
     }
 
+    // Optional: a constant correction, in seconds, added to this sensor's
+    // timestamps. Unlike use_bag_record_time it does not change WHICH clock is
+    // used, only shifts it, for a sensor whose stamps are consistently early or
+    // late with respect to the rest of the rig (an unmodeled exposure or
+    // transport latency, typically).
+    if (sensor.has("time_offset"))
+    {
+      const double offset = sensor["time_offset"].as<double>();
+      if (offset != 0.0)
+      {
+        topic_time_offset_[topic] = offset;
+        MRPT_LOG_INFO_FMT(
+            "- '%s' (topic '%s'): applying a constant time_offset of %+.6f s.", sensorLabel.c_str(),
+            topic.c_str(), offset);
+      }
+    }
+
     if (sensorType == "CObservationPointCloud")
     {
       // Both sensor_msgs/PointCloud2 and livox_ros_driver(2)/CustomMsg map here;
@@ -1082,6 +1099,24 @@ void Rosbag1Dataset::doReadAhead(const std::optional<size_t>& requestedIndex, bo
 
     SF::Ptr sf = to_mrpt(rosmsg);
     ASSERT_(sf);
+
+    // Apply this topic's constant clock correction, if any. Done here, in the
+    // one place every converter's output passes through, rather than in each
+    // converter. The entry timestamp below is taken from the observation, so
+    // playback pacing follows the corrected time automatically.
+    if (!topic_time_offset_.empty() && !sf->empty())
+    {
+      if (const auto it = topic_time_offset_.find(rosmsg.getTopic());
+          it != topic_time_offset_.end())
+      {
+        const auto shift = std::chrono::duration_cast<mrpt::Clock::duration>(
+            std::chrono::duration<double>(it->second));
+        for (auto& obs : *sf)
+        {
+          obs->timestamp += shift;
+        }
+      }
+    }
 
     DatasetEntry& de = read_ahead_.at(idx).emplace();
 
