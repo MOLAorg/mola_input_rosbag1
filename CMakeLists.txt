@@ -80,7 +80,6 @@ set(LIB_SRCS
   #mrpt_ros_bridge/ros1bridge/src/image.cpp
   mrpt_ros_bridge/ros1bridge/src/point_cloud2.cpp
   mrpt_ros_bridge/ros1bridge/src/range.cpp
-  mrpt_ros_bridge/ros1bridge/src/point_cloud.cpp
 )
 
 set(LIB_PUBLIC_HDRS
@@ -91,7 +90,6 @@ set(LIB_PUBLIC_HDRS
   mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/map.h
   mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/gps.h
   mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/logging.h
-  mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/point_cloud.h
   mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/imu.h
   mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/laser_scan.h
   mrpt_ros_bridge/ros1bridge/include/mrpt/ros1bridge/point_cloud2.h
