@@ -77,7 +77,7 @@ set(LIB_SRCS
   mrpt_ros_bridge/ros1bridge/src/gps.cpp
   mrpt_ros_bridge/ros1bridge/src/imu.cpp
   mrpt_ros_bridge/ros1bridge/src/pose.cpp
-  #mrpt_ros_bridge/ros1bridge/src/image.cpp
+  mrpt_ros_bridge/ros1bridge/src/image.cpp
   mrpt_ros_bridge/ros1bridge/src/point_cloud2.cpp
   mrpt_ros_bridge/ros1bridge/src/range.cpp
 )

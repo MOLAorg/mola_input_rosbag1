@@ -39,6 +39,7 @@
 
 // MRPT <-> ROS1 message conversions (vendored mrpt_ros1bridge sub-library):
 #include <mrpt/ros1bridge/gps.h>
+#include <mrpt/ros1bridge/image.h>
 #include <mrpt/ros1bridge/imu.h>
 #include <mrpt/ros1bridge/laser_scan.h>
 #include <mrpt/ros1bridge/point_cloud2.h>
@@ -107,8 +108,12 @@ geometry_msgs::msg::TransformStamped toRos2Transform(const geometry_msgs::Transf
   return out;
 }
 
-/** Manual conversion sensor_msgs/Image -> mrpt::img::CImage, so we do not
- *  depend on cv_bridge (which would require its ROS2 message types). */
+/** sensor_msgs/Image -> mrpt::img::CImage.
+ *
+ *  The plain encodings are handled by the bridge; only the Bayer patterns are
+ *  handled here, since debayering needs OpenCV and the bridge does not depend
+ *  on it.
+ */
 mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
 {
   namespace enc = sensor_msgs::image_encodings;
@@ -120,121 +125,40 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
 
   const std::string& encoding = image.encoding;
 
-  mrpt::img::TImageChannels color       = mrpt::img::CH_GRAY;
-  bool                      swapRedBlue = false;
-  unsigned int              channels    = 0;
-  if (encoding == enc::MONO8)
-  {
-    color    = mrpt::img::CH_GRAY;
-    channels = 1;
-  }
-  else if (encoding == enc::BGR8)
-  {
-    color       = mrpt::img::CH_RGB;
-    channels    = 3;
-    swapRedBlue = false;
-  }
-  else if (encoding == enc::RGB8)
-  {
-    color       = mrpt::img::CH_RGB;
-    channels    = 3;
-    swapRedBlue = true;
-  }
-  else if (encoding == enc::MONO16)
-  {
-    // 16-bit grayscale: scale the high byte to produce an 8-bit image.
-    mrpt::img::CImage    out;
-    std::vector<uint8_t> buf(static_cast<size_t>(w) * h);
-    for (unsigned int row = 0; row < h; row++)
-    {
-      const auto* srcRow = reinterpret_cast<const uint16_t*>(
-          image.data.data() + static_cast<size_t>(row) * image.step);
-      uint8_t* dstRow = buf.data() + static_cast<size_t>(row) * w;
-      for (unsigned int col = 0; col < w; col++)
-        dstRow[col] = static_cast<uint8_t>(srcRow[col] >> 8);
-    }
-    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_GRAY /*grayscale*/, buf.data());
-    return out;
-  }
-  else if (
-      encoding == enc::BAYER_RGGB8 || encoding == enc::BAYER_BGGR8 ||
+  if (encoding == enc::BAYER_RGGB8 || encoding == enc::BAYER_BGGR8 ||
       encoding == enc::BAYER_GBRG8 || encoding == enc::BAYER_GRBG8)
   {
-    // Debayer to BGR using OpenCV.
-    // Mapping: ROS name → OpenCV code (matches cv_bridge convention)
-    int code = cv::COLOR_BayerBG2BGR;
-    if (encoding == enc::BAYER_BGGR8)
-      code = cv::COLOR_BayerRG2BGR;
-    else if (encoding == enc::BAYER_GBRG8)
-      code = cv::COLOR_BayerGR2BGR;
-    else if (encoding == enc::BAYER_GRBG8)
-      code = cv::COLOR_BayerGB2BGR;
-    // else BAYER_RGGB8 → COLOR_BayerBG2BGR (already default)
+    ASSERT_GE_(image.step, w);
+    ASSERT_GE_(image.data.size(), static_cast<size_t>(image.step) * h);
 
-    cv::Mat src(
+    // Debayer straight into RGB, which is how CImage stores color pixels.
+    // Mapping: ROS name -> OpenCV code (matches the cv_bridge convention)
+    int code = cv::COLOR_BayerBG2RGB;
+    if (encoding == enc::BAYER_BGGR8)
+    {
+      code = cv::COLOR_BayerRG2RGB;
+    }
+    else if (encoding == enc::BAYER_GBRG8)
+    {
+      code = cv::COLOR_BayerGR2RGB;
+    }
+    else if (encoding == enc::BAYER_GRBG8)
+    {
+      code = cv::COLOR_BayerGB2RGB;
+    }
+
+    const cv::Mat src(
         static_cast<int>(h), static_cast<int>(w), CV_8UC1,
         const_cast<unsigned char*>(image.data.data()), image.step);
-    cv::Mat bgr;
-    cv::cvtColor(src, bgr, code);
+    cv::Mat rgb;
+    cv::cvtColor(src, rgb, code);
+
     mrpt::img::CImage out;
-    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB /*color*/, bgr.data, false /*already BGR*/);
+    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB, rgb.data);
     return out;
   }
-  else if (encoding == enc::RGBA8)
-  {
-    cv::Mat src(
-        static_cast<int>(h), static_cast<int>(w), CV_8UC4,
-        const_cast<unsigned char*>(image.data.data()), image.step);
-    cv::Mat bgr;
-    cv::cvtColor(src, bgr, cv::COLOR_RGBA2BGR);
-    mrpt::img::CImage out;
-    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB, bgr.data, false);
-    return out;
-  }
-  else if (encoding == enc::BGRA8)
-  {
-    cv::Mat src(
-        static_cast<int>(h), static_cast<int>(w), CV_8UC4,
-        const_cast<unsigned char*>(image.data.data()), image.step);
-    cv::Mat bgr;
-    cv::cvtColor(src, bgr, cv::COLOR_BGRA2BGR);
-    mrpt::img::CImage out;
-    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB, bgr.data, false);
-    return out;
-  }
-  else
-  {
-    THROW_EXCEPTION_FMT(
-        "Unsupported image encoding '%s'. Supported: mono8, mono16, rgb8, bgr8, rgba8, bgra8, "
-        "bayer_rggb8, bayer_bggr8, bayer_gbrg8, bayer_grbg8.",
-        encoding.c_str());
-  }
 
-  const unsigned int expectedStride = w * channels;
-  ASSERT_GE_(image.data.size(), static_cast<size_t>(image.step) * h);
-
-  mrpt::img::CImage out;
-
-  if (image.step == expectedStride)
-  {
-    // Contiguous: load directly (CImage copies the buffer):
-    out.loadFromMemoryBuffer(
-        w, h, color, const_cast<unsigned char*>(image.data.data()), swapRedBlue);
-  }
-  else
-  {
-    // Row stride has padding: repack into a contiguous buffer first:
-    std::vector<unsigned char> packed(static_cast<size_t>(expectedStride) * h);
-    for (unsigned int row = 0; row < h; row++)
-    {
-      std::memcpy(
-          packed.data() + static_cast<size_t>(row) * expectedStride,
-          image.data.data() + static_cast<size_t>(row) * image.step, expectedStride);
-    }
-    out.loadFromMemoryBuffer(w, h, color, packed.data(), swapRedBlue);
-  }
-
-  return out;
+  return mrpt::ros1bridge::fromROS(image);
 }
 
 /** Manual conversion sensor_msgs/CameraInfo -> mrpt::img::TCamera. Unknown
