@@ -169,31 +169,51 @@ mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
  *  no amount of outlier rejection can catch.
  *
  *  Model names are not standardized across calibration toolchains, so the
- *  common aliases are accepted for each of the two supported families. */
-mrpt::img::TCamera cameraInfoFromROS(const sensor_msgs::CameraInfo& info, bool& recognized)
+ *  common aliases are accepted for each of the two supported families.
+ *
+ *  `isRectified`: the images of this topic are already rectified, so the ROS
+ *  convention applies: the valid intrinsics are those of the projection matrix
+ *  P (which differ from K after rectification) and there is no distortion left
+ *  to model. Using K and D there would distort an already-undistorted image.
+ */
+mrpt::img::TCamera cameraInfoFromROS(
+    const sensor_msgs::CameraInfo& info, bool isRectified, bool& recognized)
 {
   mrpt::img::TCamera cam;
-  cam.ncols = info.width;
-  cam.nrows = info.height;
-  cam.setIntrinsicParamsFromValues(info.K[0], info.K[4], info.K[2], info.K[5]);
-
+  cam.ncols  = info.width;
+  cam.nrows  = info.height;
   recognized = true;
 
-  const std::vector<double>& d = info.D;
-  if (info.distortion_model == "plumb_bob" || info.distortion_model == "radtan" ||
-      info.distortion_model == "rational_polynomial")
+  if (isRectified)
   {
-    cam.setDistortionPlumbBob(
-        d.size() > 0 ? d[0] : 0.0, d.size() > 1 ? d[1] : 0.0, d.size() > 2 ? d[2] : 0.0,
-        d.size() > 3 ? d[3] : 0.0, d.size() > 4 ? d[4] : 0.0);
+    cam.setIntrinsicParamsFromValues(info.P[0], info.P[5], info.P[2], info.P[6]);
+    cam.distortion = mrpt::img::DistortionModel::none;
+    return cam;
+  }
+
+  cam.setIntrinsicParamsFromValues(info.K[0], info.K[4], info.K[2], info.K[5]);
+
+  const std::vector<double>& d   = info.D;
+  const auto                 dAt = [&d](size_t i) { return i < d.size() ? d[i] : 0.0; };
+
+  if (info.distortion_model == "plumb_bob" || info.distortion_model == "radtan")
+  {
+    cam.setDistortionPlumbBob(dAt(0), dAt(1), dAt(2), dAt(3), dAt(4));
+  }
+  else if (info.distortion_model == "rational_polynomial")
+  {
+    // ROS orders D as [k1 k2 p1 p2 k3 k4 k5 k6], which is exactly MRPT's
+    // 8-coefficient plumb_bob layout, so no coefficient is dropped.
+    cam.setDistortionPlumbBob(dAt(0), dAt(1), dAt(2), dAt(3), dAt(4));
+    cam.k4(dAt(5));
+    cam.k5(dAt(6));
+    cam.k6(dAt(7));
   }
   else if (
       info.distortion_model == "equidistant" || info.distortion_model == "fisheye" ||
       info.distortion_model == "kannala_brandt")
   {
-    cam.setDistortionKannalaBrandt(
-        d.size() > 0 ? d[0] : 0.0, d.size() > 1 ? d[1] : 0.0, d.size() > 2 ? d[2] : 0.0,
-        d.size() > 3 ? d[3] : 0.0);
+    cam.setDistortionKannalaBrandt(dAt(0), dAt(1), dAt(2), dAt(3));
   }
   else
   {
@@ -203,6 +223,17 @@ mrpt::img::TCamera cameraInfoFromROS(const sensor_msgs::CameraInfo& info, bool& 
     recognized                 = !hasCoefficients;
   }
   return cam;
+}
+
+/** True if the image topic follows the ROS `image_proc` naming convention for
+ *  already-rectified images. */
+bool isRectifiedImageTopic(const std::string& imageTopic)
+{
+  std::vector<std::string> parts;
+  mrpt::system::tokenize(imageTopic, "/", parts);
+  return std::any_of(
+      parts.begin(), parts.end(),
+      [](const std::string& s) { return s == "image_rect" || s == "image_rect_color"; });
 }
 
 /** Finds the `sensor_msgs/CameraInfo` topic paired with an image topic,
@@ -605,17 +636,21 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     // used, only shifts it, for a sensor whose stamps are consistently early or
     // late with respect to the rest of the rig (an unmodeled exposure or
     // transport latency, typically).
+    double timeOffset = 0;
     if (sensor.has("time_offset"))
     {
-      const double offset = sensor["time_offset"].as<double>();
-      if (offset != 0.0)
+      timeOffset = sensor["time_offset"].as<double>();
+      if (timeOffset != 0.0)
       {
-        topic_time_offset_[topic] = offset;
         MRPT_LOG_INFO_FMT(
             "- '%s' (topic '%s'): applying a constant time_offset of %+.6f s.", sensorLabel.c_str(),
-            topic.c_str(), offset);
+            topic.c_str(), timeOffset);
       }
     }
+
+    // Number of handlers already installed for this topic, so the offset above
+    // is attached only to the one(s) added right below for this sensor entry:
+    const size_t handlersBefore = lookup_.count(topic) ? lookup_.at(topic).size() : 0;
 
     if (sensorType == "CObservationPointCloud")
     {
@@ -651,6 +686,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       // (if any) and pre-scan its first message, so CObservationImage::
       // cameraParams is populated without requiring a launch-file override.
       std::optional<mrpt::img::TCamera> fixedCameraParams;
+      const bool                        rectifiedTopic = isRectifiedImageTopic(topic);
       if (const auto infoTopic = findCameraInfoTopic(topic, topic2type); infoTopic)
       {
         rosbag::View infoView;
@@ -664,11 +700,12 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
           if (const auto info = it->instantiate<sensor_msgs::CameraInfo>(); info)
           {
             bool modelRecognized = true;
-            fixedCameraParams    = cameraInfoFromROS(*info, modelRecognized);
+            fixedCameraParams    = cameraInfoFromROS(*info, rectifiedTopic, modelRecognized);
             MRPT_LOG_INFO_FMT(
-                "- '%s': camera intrinsics from '%s' (%ux%u, fx=%.2f, fy=%.2f)",
+                "- '%s': camera intrinsics from '%s' (%ux%u, fx=%.2f, fy=%.2f, %s)",
                 sensorLabel.c_str(), infoTopic->c_str(), fixedCameraParams->ncols,
-                fixedCameraParams->nrows, fixedCameraParams->fx(), fixedCameraParams->fy());
+                fixedCameraParams->nrows, fixedCameraParams->fx(), fixedCameraParams->fy(),
+                rectifiedTopic ? "rectified topic: using P, no distortion" : "using K and D");
             if (!modelRecognized)
             {
               MRPT_LOG_WARN_FMT(
@@ -770,6 +807,15 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
     {
       THROW_EXCEPTION_FMT(
           "Unsupported sensor type '%s' for topic '%s'", sensorType.c_str(), topic.c_str());
+    }
+
+    if (timeOffset != 0.0)
+    {
+      auto& handlers = lookup_[topic];
+      for (size_t i = handlersBefore; i < handlers.size(); i++)
+      {
+        handlers[i].timeOffset = timeOffset;
+      }
     }
 
     MRPT_LOG_INFO_FMT(
@@ -1023,24 +1069,6 @@ void Rosbag1Dataset::doReadAhead(const std::optional<size_t>& requestedIndex, bo
 
     SF::Ptr sf = to_mrpt(rosmsg);
     ASSERT_(sf);
-
-    // Apply this topic's constant clock correction, if any. Done here, in the
-    // one place every converter's output passes through, rather than in each
-    // converter. The entry timestamp below is taken from the observation, so
-    // playback pacing follows the corrected time automatically.
-    if (!topic_time_offset_.empty() && !sf->empty())
-    {
-      if (const auto it = topic_time_offset_.find(rosmsg.getTopic());
-          it != topic_time_offset_.end())
-      {
-        const auto shift = std::chrono::duration_cast<mrpt::Clock::duration>(
-            std::chrono::duration<double>(it->second));
-        for (auto& obs : *sf)
-        {
-          obs->timestamp += shift;
-        }
-      }
-    }
 
     DatasetEntry& de = read_ahead_.at(idx).emplace();
 
@@ -1714,12 +1742,23 @@ Rosbag1Dataset::SF::Ptr Rosbag1Dataset::to_mrpt(const rosbag::MessageInstance& r
 
   if (auto search = lookup_.find(topic); search != lookup_.end())
   {
-    for (const auto& callback : search->second)
+    for (const auto& handler : search->second)
     {
-      auto obs = callback(rosmsg);
+      auto obs = handler.callback(rosmsg);
+
+      // Apply this handler's constant clock correction, if any. Done here, in
+      // the one place every converter's output passes through, rather than in
+      // each converter. Downstream, the read-ahead entry timestamp is taken
+      // from the observation, so playback pacing follows the corrected time.
+      const auto shift = std::chrono::duration_cast<mrpt::Clock::duration>(
+          std::chrono::duration<double>(handler.timeOffset));
 
       for (const auto& o : obs)
       {  // insert observation:
+        if (handler.timeOffset != 0.0)
+        {
+          o->timestamp += shift;
+        }
         rets->insert(o);
       }
     }

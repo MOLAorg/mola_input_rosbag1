@@ -160,10 +160,6 @@ class Rosbag1Dataset : public RawDataSourceBase,
   std::optional<mrpt::Clock::time_point> rosbag_begin_time_;
   size_t                                 read_ahead_length_ = 15;
 
-  /// Per-topic constant clock correction in seconds, from each sensor's
-  /// optional `time_offset`. Empty unless some sensor declares one.
-  std::map<std::string, double> topic_time_offset_;
-
   std::optional<mrpt::Clock::time_point> last_play_wallclock_time_;
   double                                 last_dataset_time_ = 0;
 
@@ -208,8 +204,24 @@ class Rosbag1Dataset : public RawDataSourceBase,
 
   using CallbackFunction = std::function<Obs(const rosbag::MessageInstance&)>;
 
-  std::map<std::string, std::vector<CallbackFunction>> lookup_;
-  std::set<std::string>                                unhandledTopics_;
+  /// One registered handler for a topic. The clock correction is stored here,
+  /// and not per topic, since several sensor entries may share one topic and
+  /// each of them may declare its own `time_offset`.
+  struct TopicHandler
+  {
+    TopicHandler() = default;
+    TopicHandler(const CallbackFunction& cb, double offset = 0) : callback(cb), timeOffset(offset)
+    {
+    }
+
+    CallbackFunction callback;
+
+    /// Constant correction [s] added to this handler's observation timestamps.
+    double timeOffset = 0;
+  };
+
+  std::map<std::string, std::vector<TopicHandler>> lookup_;
+  std::set<std::string>                            unhandledTopics_;
 
   std::shared_ptr<tf2::BufferCore> tfBuffer_;
 
