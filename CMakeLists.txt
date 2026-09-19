@@ -120,27 +120,12 @@ target_include_directories(${PROJECT_NAME}
 target_link_libraries(mrpt_ros1bridge
   PRIVATE
   rosbag
-  #${roscpp_LIBRARIES}
-  #${cv_bridge_LIBRARIES}
 )
 target_include_directories(mrpt_ros1bridge
   SYSTEM
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/ros1/include
 )
-
-if (0)
-target_include_directories(${PROJECT_NAME}
-  SYSTEM
-  PUBLIC
-    ${tf2_INCLUDE_DIRS}
-  PRIVATE
-    ${cv_bridge_INCLUDE_DIRS}
-)
-target_compile_definitions(${PROJECT_NAME} PRIVATE ${ROS_DEFINITIONS})
-target_compile_definitions(${PROJECT_NAME} PRIVATE IS_MRPT_ROS1BRIDGE)
-target_compile_definitions(${PROJECT_NAME} PRIVATE CV_BRIDGE_VERSION=${cv_bridge_VERSION_HEX})
-endif()
 
 # ---------------------------------------------------
 # CLI app: "rosbag1-info" (equivalent to ROS1's `rosbag info`)
@@ -160,11 +145,5 @@ mola_add_executable(
 # ---------------------------------------------------
 
 
-
-# Convert package versions to hex so they can be used in preprocessor for wider
-# versions compatibility of "one-source for all":
-#mola_version_to_hex(${cv_bridge_VERSION}  cv_bridge_VERSION_HEX)
-#target_compile_definitions(${PROJECT_NAME} PRIVATE CV_BRIDGE_VERSION=${cv_bridge_VERSION_HEX})
-#message(STATUS "Found: cv_bridge_VERSION: ${cv_bridge_VERSION} (${cv_bridge_VERSION_HEX})")
 
 
