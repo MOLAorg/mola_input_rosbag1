@@ -1,4 +1,4 @@
 [submodule "mrpt_ros_bridge"]
 	path = mrpt_ros_bridge
 	url = https://github.com/MRPT/mrpt_ros_bridge.git
-	branch = ros1
+	branch = ros1-mola-vendored
