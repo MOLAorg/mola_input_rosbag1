@@ -3,6 +3,34 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
+Forthcoming
+-----------
+* ci: add GitHub release workflow on version tags
+* Bump mrpt_ros_bridge: fix FLOAT64 per-point timestamps
+* Merge pull request `#10 <https://github.com/MOLAorg/mola_input_rosbag1/issues/10>`_ from MOLAorg/feat/mrpt3
+* Vendor mrpt_ros_bridge's ros1-mola-vendored branch instead of ros1
+* Merge pull request `#9 <https://github.com/MOLAorg/mola_input_rosbag1/issues/9>`_ from MOLAorg/feat/mrpt3
+* fix: review observations
+* Use the bridge's ros1 branch, now that it builds against MRPT 3.x; fix RGB/BGR channel swap in image conversion
+* Merge remote-tracking branch 'origin/develop' into feat/mrpt3
+* Merge remote-tracking branch 'origin/feat/per-sensor-time-offset' into feat/mrpt3
+* Merge pull request `#8 <https://github.com/MOLAorg/mola_input_rosbag1/issues/8>`_ from MOLAorg/fix/float64-per-point-timestamps
+* Vendor the bridge's ros1 branch instead of ros1-mola-vendored, fixing FLOAT64 per-point timestamps
+* Merge remote-tracking branch 'origin/develop' into feat/mrpt3
+* Merge pull request `#6 <https://github.com/MOLAorg/mola_input_rosbag1/issues/6>`_ from MOLAorg/fix/camera-info-distortion-model
+* Add an optional per-sensor time_offset to correct a constant per-sensor stamp bias
+* Accept more camera_info distortion model names, and warn when one is unhandled
+* Populate CObservationImage::cameraParams from sensor_msgs/CameraInfo
+* Merge pull request `#5 <https://github.com/MOLAorg/mola_input_rosbag1/issues/5>`_ from MOLAorg/feat/rosbag1-comma-separated-bag-list
+* Accept a comma-separated bag list in rosbag_filename
+* Port to MRPT 3.x: cmake targets, TImageChannels, yaml associativity
+* Merge pull request `#4 <https://github.com/MOLAorg/mola_input_rosbag1/issues/4>`_ from MOLAorg/feat/se3-odometry-as-robot-pose
+* Allow reading a 3D odometry source as CObservationRobotPose
+* Report the dataset playback time to the GUI (`#3 <https://github.com/MOLAorg/mola_input_rosbag1/issues/3>`_)
+* Fix a segfault in findOutSensorPose, and resolve ROS1-era slashed frame ids
+* Fix build warnings on newer ROS2 distro/g++
+* Contributors: Jose Luis Blanco-Claraco
+
 0.4.0 (2026-08-07)
 ------------------
 * Expose the bag's /tf tree via mola::TransformTreeSource, so other MOLA
