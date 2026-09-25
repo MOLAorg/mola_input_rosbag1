@@ -15,7 +15,7 @@
 
   <depend>mola_common</depend>
   <depend>mola_kernel</depend>
-  <depend>mrpt_obs</depend>
+  <depend version_gte="3.2.1">mrpt_obs</depend>
   <depend>mrpt_maps</depend>
   <!-- mrpt_libros_bridge is vendored here as a git submodule (mrpt_ros_bridge/)
        until it is released within MRPT itself. -->
@@ -28,8 +28,6 @@
   <depend>libboost-filesystem-dev</depend>
   <depend>libboost-program-options-dev</depend>
   <depend>libboost-regex-dev</depend>
-
-  <depend>libopencv-dev</depend>
 
   <depend>geometry_msgs</depend>
   <depend>tf2</depend>
