@@ -3,8 +3,8 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-Forthcoming
------------
+0.5.0 (2026-09-25)
+------------------
 * ci: add GitHub release workflow on version tags
 * Bump mrpt_ros_bridge: fix FLOAT64 per-point timestamps
 * Merge pull request `#10 <https://github.com/MOLAorg/mola_input_rosbag1/issues/10>`_ from MOLAorg/feat/mrpt3
