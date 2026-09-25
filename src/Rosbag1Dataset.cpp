@@ -69,8 +69,6 @@
 #include <cstring>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <memory>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
 #include <set>
 #include <tf2/buffer_core.hpp>
 #include <tf2/exceptions.hpp>
@@ -111,54 +109,45 @@ geometry_msgs::msg::TransformStamped toRos2Transform(const geometry_msgs::Transf
 /** sensor_msgs/Image -> mrpt::img::CImage.
  *
  *  The plain encodings are handled by the bridge; only the Bayer patterns are
- *  handled here, since debayering needs OpenCV and the bridge does not depend
- *  on it.
+ *  handled here.
  */
 mrpt::img::CImage imageFromROS(const sensor_msgs::Image& image)
 {
   namespace enc = sensor_msgs::image_encodings;
-
-  const unsigned int w = image.width;
-  const unsigned int h = image.height;
-  ASSERT_GT_(w, 0U);
-  ASSERT_GT_(h, 0U);
+  using mrpt::img::BayerPattern;
 
   const std::string& encoding = image.encoding;
 
-  if (encoding == enc::BAYER_RGGB8 || encoding == enc::BAYER_BGGR8 ||
-      encoding == enc::BAYER_GBRG8 || encoding == enc::BAYER_GRBG8)
+  std::optional<BayerPattern> pattern;
+  if (encoding == enc::BAYER_RGGB8)
   {
-    ASSERT_GE_(image.step, w);
-    ASSERT_GE_(image.data.size(), static_cast<size_t>(image.step) * h);
-
-    // Debayer straight into RGB, which is how CImage stores color pixels.
-    // Mapping: ROS name -> OpenCV code (matches the cv_bridge convention)
-    int code = cv::COLOR_BayerBG2RGB;
-    if (encoding == enc::BAYER_BGGR8)
-    {
-      code = cv::COLOR_BayerRG2RGB;
-    }
-    else if (encoding == enc::BAYER_GBRG8)
-    {
-      code = cv::COLOR_BayerGR2RGB;
-    }
-    else if (encoding == enc::BAYER_GRBG8)
-    {
-      code = cv::COLOR_BayerGB2RGB;
-    }
-
-    const cv::Mat src(
-        static_cast<int>(h), static_cast<int>(w), CV_8UC1,
-        const_cast<unsigned char*>(image.data.data()), image.step);
-    cv::Mat rgb;
-    cv::cvtColor(src, rgb, code);
-
-    mrpt::img::CImage out;
-    out.loadFromMemoryBuffer(w, h, mrpt::img::CH_RGB, rgb.data);
-    return out;
+    pattern = BayerPattern::RGGB;
+  }
+  else if (encoding == enc::BAYER_BGGR8)
+  {
+    pattern = BayerPattern::BGGR;
+  }
+  else if (encoding == enc::BAYER_GBRG8)
+  {
+    pattern = BayerPattern::GBRG;
+  }
+  else if (encoding == enc::BAYER_GRBG8)
+  {
+    pattern = BayerPattern::GRBG;
   }
 
-  return mrpt::ros1bridge::fromROS(image);
+  if (!pattern)
+  {
+    return mrpt::ros1bridge::fromROS(image);
+  }
+
+  ASSERT_GE_(image.data.size(), static_cast<size_t>(image.step) * image.height);
+
+  mrpt::img::CImage out;
+  out.loadFromBayerBuffer(
+      static_cast<int32_t>(image.width), static_cast<int32_t>(image.height), image.data.data(),
+      image.step, *pattern);
+  return out;
 }
 
 /** Manual conversion sensor_msgs/CameraInfo -> mrpt::img::TCamera. Unknown
@@ -1668,33 +1657,28 @@ Rosbag1Dataset::Obs Rosbag1Dataset::toCompressedImage(
   const auto image = rosmsg.instantiate<sensor_msgs::CompressedImage>();
   ASSERT_(image);
 
-  // cv::imdecode handles JPEG, PNG, and most other formats automatically.
-  const cv::Mat compressed(
-      1, static_cast<int>(image->data.size()), CV_8UC1,
-      const_cast<unsigned char*>(image->data.data()));
-  cv::Mat decoded = cv::imdecode(compressed, cv::IMREAD_ANYCOLOR);
-
-  if (decoded.empty())
-  {
-    THROW_EXCEPTION_FMT(
-        "cv::imdecode failed for CompressedImage on topic '%s' (format='%s')",
-        std::string(label).c_str(), image->format.c_str());
-  }
-
-  // imdecode returns BGR; convert to the channel count MRPT expects:
-  const mrpt::img::TImageChannels channels =
-      (decoded.channels() == 3) ? mrpt::img::CH_RGB : mrpt::img::CH_GRAY;
-  if (decoded.channels() == 4)
-  {
-    cv::cvtColor(decoded, decoded, cv::COLOR_BGRA2BGR);
-  }
-
   auto imgObs         = mrpt::obs::CObservationImage::Create();
   imgObs->sensorLabel = label;
   imgObs->timestamp   = mrpt::ros1bridge::fromROS(image->header.stamp);
-  imgObs->image.loadFromMemoryBuffer(
-      static_cast<unsigned int>(decoded.cols), static_cast<unsigned int>(decoded.rows), channels,
-      decoded.data, false /*already BGR*/);
+
+  // Decoded as 8-bit gray or RGB, the same layouts produced for raw images:
+  auto&      img    = imgObs->image;
+  const auto decode = [&](mrpt::img::TImageChannels channels)
+  {
+    return img.loadFromEncodedBuffer(
+        image->data.data(), image->data.size(), channels, mrpt::img::PixelDepth::D8U);
+  };
+  bool ok = decode(mrpt::img::CH_AS_IS);
+  if (ok && img.channels() == mrpt::img::CH_RGBA)
+  {
+    ok = decode(mrpt::img::CH_RGB);  // drop the alpha channel
+  }
+  if (!ok)
+  {
+    THROW_EXCEPTION_FMT(
+        "Cannot decode CompressedImage on topic '%s' (format='%s')", std::string(label).c_str(),
+        image->format.c_str());
+  }
 
   if (fixedCameraParams)
   {
