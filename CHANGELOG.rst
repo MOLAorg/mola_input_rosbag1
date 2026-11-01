@@ -3,8 +3,8 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-Forthcoming
------------
+0.5.1 (2026-11-01)
+------------------
 * Drop the OpenCV dependency: CompressedImage decoding and Bayer demosaicing with MRPT CImage (`#11 <https://github.com/MOLAorg/mola_input_rosbag1/issues/11>`_)
 * Fix swapped red/blue and alpha channel handling of CompressedImage messages
 * Require MRPT >= 3.3.0
