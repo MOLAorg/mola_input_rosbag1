@@ -27,6 +27,7 @@
 #include <deque>
 #include <functional>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <string>
@@ -82,8 +83,16 @@ class Rosbag1Dataset : public RawDataSourceBase,
   mrpt::obs::CSensoryFrame::Ptr datasetGetObservations(size_t timestep) const override;
 
   // See docs in base class (mola::OfflineDatasetSource):
-  bool         hasGroundTruthTrajectory() const override { return !groundTruthTrajectory_.empty(); }
-  trajectory_t getGroundTruthTrajectory() const override { return groundTruthTrajectory_; }
+  bool hasGroundTruthTrajectory() const override
+  {
+    std::lock_guard lk(groundTruthTrajectoryMtx_);
+    return !groundTruthTrajectory_.empty();
+  }
+  trajectory_t getGroundTruthTrajectory() const override
+  {
+    std::lock_guard lk(groundTruthTrajectoryMtx_);
+    return groundTruthTrajectory_;
+  }
 
   // Virtual interface of Dataset_UI (see docs in derived class)
   size_t datasetUI_size() const override { return datasetSize(); }
@@ -154,8 +163,14 @@ class Rosbag1Dataset : public RawDataSourceBase,
   /// as a CObservationRobotPose/CObservationOdometry (if also listed under "sensors").
   std::string ground_truth_topic_;
 
+  /// Optional ground-truth trajectory file in TUM format
+  /// ("t x y z qx qy qz qw"), loaded at init time into groundTruthTrajectory_.
+  /// Takes precedence over ground_truth_topic_ if both are given.
+  std::string ground_truth_tum_file_;
+
   /// See mola::OfflineDatasetSource::getGroundTruthTrajectory()
-  trajectory_t groundTruthTrajectory_;
+  trajectory_t       groundTruthTrajectory_;
+  mutable std::mutex groundTruthTrajectoryMtx_;
 
   std::optional<mrpt::Clock::time_point> rosbag_begin_time_;
   size_t                                 read_ahead_length_ = 15;
