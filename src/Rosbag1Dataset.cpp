@@ -66,6 +66,7 @@
 
 // ROS2 tf2 for the transform tree (geometry2 package, available in the build env):
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <memory>
@@ -429,26 +430,48 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   // (hasGroundTruthTrajectory() / getGroundTruthTrajectory()), in addition to
   // the normal per-timestep publishing as a regular observation (if the same
   // topic is also listed under "sensors").
+  trajectory_t gt;
   if (!ground_truth_tum_file_.empty())
   {
     bool loaded = false;
     try
     {
-      loaded = groundTruthTrajectory_.loadFromTextFile_TUM(ground_truth_tum_file_);
+      loaded = gt.loadFromTextFile_TUM(ground_truth_tum_file_);
     }
     catch (const std::exception& e)
     {
       MRPT_LOG_WARN_STREAM("Error parsing TUM file: " << e.what());
     }
-    if (loaded && !groundTruthTrajectory_.empty())
+    // Drop rows with non-finite values ("nan" parses as a number):
+    trajectory_t finiteGt;
+    size_t       nBad = 0;
+    for (const auto& [t, p] : gt)
+    {
+      if (std::isfinite(p.x) && std::isfinite(p.y) && std::isfinite(p.z) && std::isfinite(p.yaw) &&
+          std::isfinite(p.pitch) && std::isfinite(p.roll))
+      {
+        finiteGt.insert(t, p);
+      }
+      else
+      {
+        nBad++;
+      }
+    }
+    if (nBad > 0)
+    {
+      MRPT_LOG_WARN_STREAM("Skipped " << nBad << " non-finite ground-truth pose(s).");
+    }
+    gt = std::move(finiteGt);
+
+    if (loaded && !gt.empty())
     {
       MRPT_LOG_INFO_STREAM(
-          "Loaded " << groundTruthTrajectory_.size() << " ground-truth pose(s) from '"
-                    << ground_truth_tum_file_ << "'.");
+          "Loaded " << gt.size() << " ground-truth pose(s) from '" << ground_truth_tum_file_
+                    << "'.");
     }
     else
     {
-      groundTruthTrajectory_.clear();
+      gt.clear();
       MRPT_LOG_WARN_STREAM(
           "Could not load any ground-truth pose from TUM file '" << ground_truth_tum_file_ << "'.");
     }
@@ -522,7 +545,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
           break;
         }
 
-        groundTruthTrajectory_.insert(tim, pose);
+        gt.insert(tim, pose);
         nGtPoses++;
       }
 
@@ -534,6 +557,11 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
         MRPT_LOG_WARN_STREAM(
             "ground_truth_topic '" << ground_truth_topic_ << "' yielded no usable GT poses.");
     }
+  }
+
+  {
+    std::lock_guard lk(groundTruthTrajectoryMtx_);
+    groundTruthTrajectory_ = std::move(gt);
   }
 
   // Begin of code adapted from "Transcriber" class from rosbag2rawlog:
