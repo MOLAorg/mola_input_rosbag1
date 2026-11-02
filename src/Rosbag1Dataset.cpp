@@ -346,6 +346,7 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   YAML_LOAD_MEMBER_OPT(base_link_frame_id, std::string);
   YAML_LOAD_MEMBER_OPT(read_ahead_length, size_t);
   YAML_LOAD_MEMBER_OPT(ground_truth_topic, std::string);
+  YAML_LOAD_MEMBER_OPT(ground_truth_tum_file, std::string);
   paused_ = cfg.getOrDefault<bool>("start_paused", paused_);
 
   // Open input ros bag(s), merging them into one single chronological View:
@@ -428,7 +429,31 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
   // (hasGroundTruthTrajectory() / getGroundTruthTrajectory()), in addition to
   // the normal per-timestep publishing as a regular observation (if the same
   // topic is also listed under "sensors").
-  if (!ground_truth_topic_.empty())
+  if (!ground_truth_tum_file_.empty())
+  {
+    bool loaded = false;
+    try
+    {
+      loaded = groundTruthTrajectory_.loadFromTextFile_TUM(ground_truth_tum_file_);
+    }
+    catch (const std::exception& e)
+    {
+      MRPT_LOG_WARN_STREAM("Error parsing TUM file: " << e.what());
+    }
+    if (loaded && !groundTruthTrajectory_.empty())
+    {
+      MRPT_LOG_INFO_STREAM(
+          "Loaded " << groundTruthTrajectory_.size() << " ground-truth pose(s) from '"
+                    << ground_truth_tum_file_ << "'.");
+    }
+    else
+    {
+      groundTruthTrajectory_.clear();
+      MRPT_LOG_WARN_STREAM(
+          "Could not load any ground-truth pose from TUM file '" << ground_truth_tum_file_ << "'.");
+    }
+  }
+  else if (!ground_truth_topic_.empty())
   {
     if (topic2type.count(ground_truth_topic_) == 0)
     {

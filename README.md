@@ -86,6 +86,7 @@ The pose of each sensor in the robot body frame is looked up from the bag's
 | `start_paused`       | no  | `false`    | Start playback paused. |
 | `sensors`            | no  | auto       | Explicit list of topics, types, and pose overrides. If omitted, all topics with a known mapping are exposed automatically using the topic name as `sensorLabel`. |
 | `ground_truth_topic` | no  | -          | Topic (`geometry_msgs/PoseStamped` or `nav_msgs/Odometry`) pre-scanned at start-up into a full trajectory, exposed via the `mola::OfflineDatasetSource` ground-truth API (`hasGroundTruthTrajectory()` / `getGroundTruthTrajectory()`), e.g. for `evo`-style evaluation. This is independent from (and can be combined with) listing the same topic under `sensors` for normal per-timestep publishing as a `CObservationRobotPose`/`CObservationOdometry`. |
+| `ground_truth_tum_file` | no | - | Ground-truth trajectory as a TUM text file (`t x y z qx qy qz qw`, `#` comments allowed), exposed through the same ground-truth API, e.g. to draw it in the GUI. Takes precedence over `ground_truth_topic`. |
 
 See `mola-cli-launchs/rosbag1_lidar.yaml` for a fully documented `sensors`
 example, and `mola-cli-launchs/rosbag1_botanicgarden.yaml` for an example

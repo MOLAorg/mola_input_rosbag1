@@ -154,6 +154,11 @@ class Rosbag1Dataset : public RawDataSourceBase,
   /// as a CObservationRobotPose/CObservationOdometry (if also listed under "sensors").
   std::string ground_truth_topic_;
 
+  /// Optional ground-truth trajectory file in TUM format
+  /// ("t x y z qx qy qz qw"), loaded at init time into groundTruthTrajectory_.
+  /// Takes precedence over ground_truth_topic_ if both are given.
+  std::string ground_truth_tum_file_;
+
   /// See mola::OfflineDatasetSource::getGroundTruthTrajectory()
   trajectory_t groundTruthTrajectory_;
 
