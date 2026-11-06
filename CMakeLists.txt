@@ -140,6 +140,17 @@ mola_add_executable(
   LINK_LIBRARIES rosbag
 )
 
+# CLI app: adds observations from a bag (e.g. camera images) to simplemap keyframes
+find_package(CLI11 REQUIRED)
+mola_add_executable(
+  TARGET mola-sm-attach-from-rosbag1
+  SOURCES apps/mola-sm-attach-from-rosbag1.cpp
+  LINK_LIBRARIES
+    ${PROJECT_NAME}
+    mola::mola_kernel
+    CLI11::CLI11
+)
+
 # ---------------------------------------------------
 
 
