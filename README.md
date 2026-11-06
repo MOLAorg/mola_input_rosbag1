@@ -178,7 +178,8 @@ mola-sm-attach-from-rosbag1 -i map.simplemap -o map_cam.simplemap \
   --rosbag1 dataset.bag --topic /camera/image_raw:camera_left
 ```
 
-`--topic` is repeatable (`TOPIC` or `TOPIC:LABEL`). Use `--fixed-sensor-pose
+`--topic` is repeatable (`TOPIC` or `TOPIC:LABEL`), one label per topic: each
+keyframe gets one observation per label. Use `--fixed-sensor-pose
 "x y z yaw pitch roll"` for bags without `/tf`, and `--image-format png` or
 `inline` to change how images are stored.
 

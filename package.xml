@@ -16,7 +16,6 @@
   <depend>mola_common</depend>
   <depend>cli11</depend>
   <depend>mola_kernel</depend>
-  <depend>mola_yaml</depend>
   <depend version_gte="3.3.0">mrpt_obs</depend>
   <depend>mrpt_maps</depend>
   <!-- mrpt_libros_bridge is vendored here as a git submodule (mrpt_ros_bridge/)

@@ -20,12 +20,13 @@
 
 #include <mola_input_rosbag1/Rosbag1Dataset.h>
 #include <mola_kernel/utils/simplemap_attach_observations.h>
-#include <mola_yaml/yaml_helpers.h>
+#include <mrpt/containers/yaml.h>
 #include <mrpt/core/exceptions.h>
 #include <mrpt/core/format.h>
 
 #include <CLI/CLI.hpp>
 #include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -52,7 +53,8 @@ int main(int argc, char** argv)
     app.add_option("--rosbag1", rosbag, "Input .bag file")->required();
     app.add_option(
            "--topic", topics,
-           "Topic to read, as TOPIC or TOPIC:LABEL (default label: the topic name). Repeatable.")
+           "Topic to read, as TOPIC or TOPIC:LABEL (default label: the topic name). Repeatable, "
+           "with a different label for each topic.")
         ->required();
     app.add_option("--max-age", opts.max_age, "Max time offset to the keyframe [s]")
         ->capture_default_str();
@@ -71,33 +73,39 @@ int main(int argc, char** argv)
 
     CLI11_PARSE(app, argc, argv);
 
-    std::string sensorsYaml;
+    // The dataset configuration, built as YAML nodes: values from the command
+    // line are taken literally, never expanded as ${...} or $(...).
+    mrpt::containers::yaml sensors = mrpt::containers::yaml::Sequence();
     for (const auto& t : topics)
     {
       const auto        sep   = t.find(':');
       const std::string topic = t.substr(0, sep);
       const std::string label = sep == std::string::npos ? topic : t.substr(sep + 1);
-      opts.sensor_labels.insert(label);
-      sensorsYaml += mrpt::format(
-          "\n        - topic: '%s'\n          sensorLabel: '%s'", topic.c_str(), label.c_str());
+      if (!opts.sensor_labels.insert(label).second)
+      {
+        throw std::invalid_argument(
+            "Label '" + label + "' is used by more than one --topic: give each one its own label");
+      }
+      mrpt::containers::yaml s = mrpt::containers::yaml::Map();
+      s["topic"]               = topic;
+      s["sensorLabel"]         = label;
       if (!fixedSensorPose.empty())
       {
-        sensorsYaml += mrpt::format(
-            "\n          fixed_sensor_pose: '%s'\n          use_fixed_sensor_pose: true",
-            fixedSensorPose.c_str());
+        s["fixed_sensor_pose"]     = fixedSensorPose;
+        s["use_fixed_sensor_pose"] = true;
       }
+      sensors.push_back(s);
     }
+    mrpt::containers::yaml params = mrpt::containers::yaml::Map();
+    params["rosbag_filename"]     = rosbag;
+    params["base_link_frame_id"]  = baseLink;
+    params["sensors"]             = sensors;
+    mrpt::containers::yaml cfg    = mrpt::containers::yaml::Map();
+    cfg["params"]                 = params;
 
     auto ds = std::make_shared<mola::Rosbag1Dataset>();
     ds->setMinLoggingLevel(mrpt::system::LVL_WARN);
-    ds->initialize(mola::Yaml::FromText(mola::parse_yaml(mrpt::format(
-        R""""(
-    params:
-      rosbag_filename: '%s'
-      base_link_frame_id: '%s'
-      sensors:%s
-)"""",
-        rosbag.c_str(), baseLink.c_str(), sensorsYaml.c_str()))));
+    ds->initialize(cfg);
 
     const auto r = mola::simplemap_attach_observations(
         inputFile, outputFile, *ds, opts,
