@@ -164,6 +164,26 @@ topics:      /imu/data          73279 msgs @   399.6 Hz : sensor_msgs/Imu
              /velodyne_points    2071 msgs @     9.9 Hz : sensor_msgs/PointCloud2
 ```
 
+### `mola-sm-attach-from-rosbag1`
+
+Adds observations from a bag (e.g. camera images, for visual place recognition)
+to the keyframes of an existing `.simplemap`. Each observation goes to the
+keyframe closest in time (`--max-age`, default 0.5 s), and each keyframe keeps
+the closest one per topic, so none is stored twice. Images are written as
+jpg/png files to `<output>_Images/` (the external files of the input map are
+hard-linked there too); observations already in the map are not added again.
+
+```bash
+mola-sm-attach-from-rosbag1 -i map.simplemap -o map_cam.simplemap \
+  --rosbag1 dataset.bag --topic /camera/image_raw:camera_left
+```
+
+`--topic` is repeatable (`TOPIC` or `TOPIC:LABEL`). Use `--fixed-sensor-pose
+"x y z yaw pitch roll"` for bags without `/tf`, and `--image-format png` or
+`inline` to change how images are stored.
+
+The ROS 2 version is `mola-sm-attach-from-rosbag2` (package `mola_input_rosbag2`).
+
 ## Building
 
 ```bash
