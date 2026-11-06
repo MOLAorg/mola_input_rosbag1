@@ -19,7 +19,6 @@
  */
 
 #include <mola_input_rosbag1/Rosbag1Dataset.h>
-#include <mola_kernel/utils/simplemap_attach_observations.h>
 #include <mrpt/containers/yaml.h>
 #include <mrpt/core/exceptions.h>
 #include <mrpt/core/format.h>
@@ -29,6 +28,11 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+// simplemap_attach_observations() is new in mola_kernel 3.4.1: built against an
+// older version, this program only reports that.
+#if __has_include(<mola_kernel/utils/simplemap_attach_observations.h>)
+#include <mola_kernel/utils/simplemap_attach_observations.h>
 
 int main(int argc, char** argv)
 {
@@ -126,3 +130,14 @@ int main(int argc, char** argv)
     return 1;
   }
 }
+
+#else
+
+int main()
+{
+  std::cerr << "mola-sm-attach-from-rosbag1: this build used a mola_kernel older than 3.4.1, "
+               "without simplemap_attach_observations().\n";
+  return 1;
+}
+
+#endif
