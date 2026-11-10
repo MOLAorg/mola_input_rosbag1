@@ -79,17 +79,22 @@ modules:
       # if the bag has no /tf), pick specific topics, or remap message types
       # (e.g. read a PointCloud2 as a CObservationRotatingScan). Example:
       #
+      # NTU-VIRAL has no /tf: the poses below come from the dataset's
+      # lidar_horz.yaml and lidar_vert.yaml (T_Body_Lidar). Their "Body"
+      # frame points down (z-down), so base_link is that frame turned upside
+      # down (a 180 deg pitch), and both the rotation and the translation of
+      # each T_Body_Lidar are expressed in it.
       sensors:
         - topic: "/os1_cloud_node1/points"
           #type: CObservationPointCloud
           # If present, this overrides whatever /tf says about the sensor pose:
-          fixed_sensor_pose: "-0.050 0.000 0.055 0 180 0" # 'x y z yaw_deg pitch_deg roll_deg'
+          fixed_sensor_pose: "0.050 0.000 -0.055 0 180 0" # 'x y z yaw_deg pitch_deg roll_deg'
           use_fixed_sensor_pose: true
 
         - topic: "/os1_cloud_node2/points"
           #type: CObservationPointCloud
           # If present, this overrides whatever /tf says about the sensor pose:
-          fixed_sensor_pose: "0.550 0.030 -0.05 0 0 -90" # 'x y z yaw_deg pitch_deg roll_deg'
+          fixed_sensor_pose: "0.550 0.030 -0.050 0 0 -90" # 'x y z yaw_deg pitch_deg roll_deg'
           use_fixed_sensor_pose: true
 
         - topic: "/right/image_raw"
