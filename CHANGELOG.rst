@@ -3,8 +3,8 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
-Forthcoming
------------
+0.6.0 (2026-11-15)
+------------------
 * New CLI mola-sm-attach-from-rosbag1: attach observations (e.g. camera images) from ROS 1 bags to simplemap keyframes.
 * Optional ground_truth_tum_file parameter (non-finite poses are dropped).
 * NTU-VIRAL launch: correct the horizontal LiDAR translation.
