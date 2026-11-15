@@ -3,6 +3,14 @@ Changelog for package mola_input_rosbag1
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 
+Forthcoming
+-----------
+* New CLI mola-sm-attach-from-rosbag1: attach observations (e.g. camera images) from ROS 1 bags to simplemap keyframes.
+* Optional ground_truth_tum_file parameter (non-finite poses are dropped).
+* NTU-VIRAL launch: correct the horizontal LiDAR translation.
+* Requires mola_kernel >= 3.4.1.
+* Contributors: Jose Luis Blanco-Claraco
+
 0.5.1 (2026-11-01)
 ------------------
 * Drop the OpenCV dependency: CompressedImage decoding and Bayer demosaicing with MRPT CImage (`#11 <https://github.com/MOLAorg/mola_input_rosbag1/issues/11>`_)
