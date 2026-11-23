@@ -45,6 +45,12 @@
 #include <mrpt/ros1bridge/point_cloud2.h>
 #include <mrpt/ros1bridge/pose.h>
 #include <mrpt/ros1bridge/time.h>
+#if __has_include(<mrpt/ros2bridge/rgbd.h>)
+#include <mrpt/ros2bridge/rgbd.h>
+#define MOLA_ROS2BRIDGE_HAS_RGBD 1
+#else
+#define MOLA_ROS2BRIDGE_HAS_RGBD 0
+#endif
 
 // Vendored ROS1 message definitions and rosbag reader:
 #include <geometry_msgs/PoseStamped.h>
@@ -835,6 +841,10 @@ void Rosbag1Dataset::initialize_rds(const Yaml& c)
       auto callback = [this, sensorLabel](const rosbag::MessageInstance& m)
       { return catchExceptions([this, sensorLabel, m]() { return toOdometry(sensorLabel, m); }); };
       lookup_[topic].emplace_back(callback);
+    }
+    else if (sensorType == "CObservation3DRangeScan")
+    {
+      installRgbdCallbacks(sensor, sensorLabel, fixedSensorPose, timeOffset, topic2type);
     }
     else if (sensorType == "CObservationRobotPose")
     {
@@ -1825,6 +1835,205 @@ Rosbag1Dataset::Obs Rosbag1Dataset::catchExceptions(const std::function<Obs()>& 
         << e.what());
     return {};
   }
+}
+
+#if MOLA_ROS2BRIDGE_HAS_RGBD
+namespace
+{
+// ROS 1 messages into their ROS 2 counterparts (same fields), for the RGB-D
+// assembler of mrpt_libros_bridge:
+std_msgs::msg::Header toRos2(const std_msgs::Header& h)
+{
+  std_msgs::msg::Header o;
+  o.stamp.sec     = static_cast<int32_t>(h.stamp.sec);
+  o.stamp.nanosec = h.stamp.nsec;
+  o.frame_id      = h.frame_id;
+  return o;
+}
+
+sensor_msgs::msg::Image toRos2(const sensor_msgs::Image& i)
+{
+  sensor_msgs::msg::Image o;
+  o.header       = toRos2(i.header);
+  o.height       = i.height;
+  o.width        = i.width;
+  o.encoding     = i.encoding;
+  o.is_bigendian = i.is_bigendian;
+  o.step         = i.step;
+  o.data         = i.data;
+  return o;
+}
+
+sensor_msgs::msg::CompressedImage toRos2(const sensor_msgs::CompressedImage& i)
+{
+  sensor_msgs::msg::CompressedImage o;
+  o.header = toRos2(i.header);
+  o.format = i.format;
+  o.data   = i.data;
+  return o;
+}
+
+sensor_msgs::msg::CameraInfo toRos2(const sensor_msgs::CameraInfo& i)
+{
+  sensor_msgs::msg::CameraInfo o;
+  o.header           = toRos2(i.header);
+  o.height           = i.height;
+  o.width            = i.width;
+  o.distortion_model = i.distortion_model;
+  o.d                = i.D;
+  std::copy(i.K.begin(), i.K.end(), o.k.begin());
+  std::copy(i.R.begin(), i.R.end(), o.r.begin());
+  std::copy(i.P.begin(), i.P.end(), o.p.begin());
+  o.binning_x      = i.binning_x;
+  o.binning_y      = i.binning_y;
+  o.roi.x_offset   = i.roi.x_offset;
+  o.roi.y_offset   = i.roi.y_offset;
+  o.roi.height     = i.roi.height;
+  o.roi.width      = i.roi.width;
+  o.roi.do_rectify = i.roi.do_rectify;
+  return o;
+}
+}  // namespace
+#endif
+
+void Rosbag1Dataset::installRgbdCallbacks(
+    [[maybe_unused]] const mrpt::containers::yaml&              sensor,
+    [[maybe_unused]] const std::string&                         sensorLabel,
+    [[maybe_unused]] const std::optional<mrpt::poses::CPose3D>& fixedSensorPose,
+    [[maybe_unused]] double                                     timeOffset,
+    [[maybe_unused]] const std::map<std::string, std::string>&  topic2type)
+{
+#if MOLA_ROS2BRIDGE_HAS_RGBD
+  using mrpt::ros2bridge::RgbdAssembler;
+
+  auto [topics, p]  = mrpt::ros2bridge::rgbdSensorFromYaml(sensor, sensorLabel);
+  p.fixedSensorPose = fixedSensorPose;
+
+  constexpr const char* kImage      = "sensor_msgs/Image";
+  constexpr const char* kCompressed = "sensor_msgs/CompressedImage";
+  constexpr const char* kInfo       = "sensor_msgs/CameraInfo";
+  std::vector<std::pair<std::string, std::vector<std::string>>> expected = {
+      {topics.depth, {kImage, kCompressed}}, {topics.depthCameraInfo, {kInfo}}};
+  if (p.withIntensity)
+  {
+    expected.push_back({topics.intensity, {kImage, kCompressed}});
+    expected.push_back({topics.intensityCameraInfo, {kInfo}});
+  }
+  for (const auto& [t, types] : expected)
+  {
+    ASSERTMSG_(
+        topic2type.count(t) != 0,
+        "RGB-D sensor '" + sensorLabel + "': topic '" + t + "' not found in the bag(s).");
+    ASSERTMSG_(
+        std::find(types.begin(), types.end(), topic2type.at(t)) != types.end(),
+        "RGB-D sensor '" + sensorLabel + "': topic '" + t + "' has the unexpected type '" +
+            topic2type.at(t) + "'.");
+  }
+
+  auto a = std::make_shared<RgbdAssembler>(p, tfBuffer_, base_link_frame_id_);
+
+  // Feeds one message, and reports the frames dropped so far, if that changes:
+  const auto feed = [this, a, sensorLabel](const std::function<RgbdAssembler::Obs()>& f) -> Obs
+  {
+    const size_t noInfo   = a->droppedWithoutCameraInfo();
+    const size_t noTf     = a->droppedWithoutTf();
+    const size_t unpaired = a->droppedUnpaired();
+    const auto   v        = f();
+    if (a->droppedWithoutCameraInfo() != noInfo)
+    {
+      MRPT_LOG_THROTTLE_INFO_FMT(
+          5.0, "RGB-D sensor '%s': %zu frame(s) skipped while waiting for camera_info.",
+          sensorLabel.c_str(), a->droppedWithoutCameraInfo());
+    }
+    if (a->droppedWithoutTf() != noTf)
+    {
+      MRPT_LOG_THROTTLE_WARN_FMT(
+          5.0, "RGB-D sensor '%s': %zu frame(s) skipped without /tf: %s", sensorLabel.c_str(),
+          a->droppedWithoutTf(), a->lastTfError().c_str());
+    }
+    if (a->droppedUnpaired() != unpaired)
+    {
+      MRPT_LOG_THROTTLE_WARN_FMT(
+          5.0,
+          "RGB-D sensor '%s': %zu image(s) dropped without a depth/intensity counterpart "
+          "within max_time_offset (the last one's closest was %.1f ms away).",
+          sensorLabel.c_str(), a->droppedUnpaired(), 1e3 * a->lastEvictedClosestDt());
+    }
+    return {v.begin(), v.end()};
+  };
+
+  const auto installImage = [&](const std::string& topic, bool isDepth)
+  {
+    const bool compressed = topic2type.at(topic) == kCompressed;
+    auto       callback   = [this, a, feed, isDepth, compressed](const rosbag::MessageInstance& m)
+    {
+      return catchExceptions(
+          [&]() -> Obs
+          {
+            return feed(
+                [&]() -> RgbdAssembler::Obs
+                {
+                  if (compressed)
+                  {
+                    const auto img = m.instantiate<sensor_msgs::CompressedImage>();
+                    ASSERT_(img);
+                    return isDepth ? a->onDepthImage(toRos2(*img))
+                                   : a->onIntensityImage(toRos2(*img));
+                  }
+                  const auto img = m.instantiate<sensor_msgs::Image>();
+                  ASSERT_(img);
+                  return isDepth ? a->onDepthImage(toRos2(*img))
+                                 : a->onIntensityImage(toRos2(*img));
+                });
+          });
+    };
+    // The time offset of the depth topic is applied by the caller, like for
+    // any other sensor; frames completed by an intensity image need it too:
+    lookup_[topic].emplace_back(callback, isDepth ? 0.0 : timeOffset);
+  };
+  const auto installInfo = [&](const std::string& topic, bool isDepth)
+  {
+    auto callback = [this, a, isDepth](const rosbag::MessageInstance& m)
+    {
+      return catchExceptions(
+          [&]() -> Obs
+          {
+            const auto info = m.instantiate<sensor_msgs::CameraInfo>();
+            ASSERT_(info);
+            if (isDepth)
+            {
+              a->onDepthCameraInfo(toRos2(*info));
+            }
+            else
+            {
+              a->onIntensityCameraInfo(toRos2(*info));
+            }
+            return {};
+          });
+    };
+    lookup_[topic].emplace_back(callback);
+  };
+
+  installImage(topics.depth, true);
+  installInfo(topics.depthCameraInfo, true);
+  if (p.withIntensity)
+  {
+    installImage(topics.intensity, false);
+    installInfo(topics.intensityCameraInfo, false);
+  }
+
+  MRPT_LOG_INFO_STREAM(
+      "- RGB-D sensor '" << sensorLabel << "': depth='" << topics.depth << "' ("
+                         << topics.depthCameraInfo << ")"
+                         << (p.withIntensity ? ", intensity='" + topics.intensity + "' (" +
+                                                   topics.intensityCameraInfo + ")"
+                                             : std::string(", no intensity")));
+#else
+  THROW_EXCEPTION_FMT(
+      "Sensor '%s': CObservation3DRangeScan (RGB-D cameras) needs mrpt_libros_bridge >= 4.2.0, "
+      "but this module was built against an older version or without it.",
+      sensorLabel.c_str());
+#endif
 }
 
 void Rosbag1Dataset::autoUnloadOldEntries() const

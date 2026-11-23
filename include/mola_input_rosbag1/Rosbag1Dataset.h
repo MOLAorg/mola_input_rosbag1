@@ -313,6 +313,12 @@ class Rosbag1Dataset : public RawDataSourceBase,
 
   Obs catchExceptions(const std::function<Obs()>& f);
 
+  /// RGB-D cameras: several topics (depth, intensity, camera_info) per sensor.
+  void installRgbdCallbacks(
+      const mrpt::containers::yaml& sensor, const std::string& sensorLabel,
+      const std::optional<mrpt::poses::CPose3D>& fixedSensorPose, double timeOffset,
+      const std::map<std::string, std::string>& topic2type);
+
   void autoUnloadOldEntries() const;
 
   bool findOutSensorPose(
