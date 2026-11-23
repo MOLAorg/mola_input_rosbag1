@@ -59,6 +59,28 @@ behavior. A source that publishes an all-zero covariance is given a default of
 
 Topics with no known mapping are ignored (a one-time warning is logged).
 
+### RGB-D cameras
+
+A `sensors` entry of `type: CObservation3DRangeScan` combines the topics of an
+RGB-D (or depth-only) camera into `CObservation3DRangeScan` observations, with
+the same keys as in `mola_input_rosbag2`. For example, a TUM RGB-D bag:
+
+```yaml
+sensors:
+  - topic: /camera/depth/image          # 16UC1 (mm), 32FC1 (m) or compressedDepth
+    type: CObservation3DRangeScan
+    sensorLabel: rgbd
+    intensity_topic: /camera/rgb/image_color   # optional; raw or compressed
+    #camera_info_topic: ...            # default: sibling "camera_info" topic
+    #intensity_camera_info_topic: ...  # default: sibling "camera_info" topic
+    #max_time_offset: 0.010            # [s] to pair depth and intensity frames
+    #max_range: 10.0                   # [m]
+```
+
+The observations are built by `mrpt::ros2bridge::RgbdAssembler`, so this needs
+`mrpt_libros_bridge` >= 4.2.0: built against an older version, such a sensor
+entry throws an exception.
+
 ## Sensor poses and `/tf`
 
 The pose of each sensor in the robot body frame is looked up from the bag's

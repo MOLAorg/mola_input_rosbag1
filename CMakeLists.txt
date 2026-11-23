@@ -24,6 +24,10 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+# RGB-D cameras (CObservation3DRangeScan) need mrpt_libros_bridge >= 4.2.0 (RgbdAssembler);
+# older versions build too, without them:
+find_package(mrpt_libros_bridge REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 find_mola_package(mola_kernel)
 
@@ -48,6 +52,8 @@ mola_add_library(
     tf2::tf2
     tf2_geometry_msgs::tf2_geometry_msgs
     ${geometry_msgs_TARGETS}
+    ${sensor_msgs_TARGETS}
+    mrpt_libros_bridge::mrpt_libros_bridge
   CMAKE_DEPENDENCIES
     mola_kernel
     mrpt_obs
